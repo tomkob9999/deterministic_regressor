@@ -1,6 +1,6 @@
 # DNF Regression Solver
 
-This script does the inversion of the above.  The above one goes DNF -> datasets, and this one goes datasets -> DNF.  It finds the bool expression from the input data like Linear Regression finds coefficients of covectors.  It does not use either linear regression or decision tree logic, though.  Instead, it looks for DNF by matching the true and false identitity records, which is the essence used in DNF Test Creator as well.  The runtime has degraded from linear to non-linear since 1.4 upgrade to accomodate realistic data that do not contain Cartesian product of variable values.
+This script does the inversion of the above.  The above one goes DNF -> datasets, and this one goes datasets -> DNF.  It finds the bool expression from the input data like Linear Regression finds coefficients of covectors.  It does not use either linear regression or decision tree logic, though.  Instead, it looks for DNF by matching the true and false identitity records, which is the essence used in DNF Test Creator as well.  The run time is exponential due to the parts that the combinations increase factorially as the input variable increases and that it converts fron cnf to dnf.
 
 
 HOW TO RUN:
