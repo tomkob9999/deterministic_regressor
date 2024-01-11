@@ -1,6 +1,6 @@
 # Name: DNF_Regression_solver
 # Author: tomio kobayashi
-# Version: 2.1.9
+# Version: 2.1.10
 # Date: 2024/01/11
 
 import itertools
@@ -168,12 +168,14 @@ class DNF_Regression_solver:
         set_dnf_false = None
         if check_false:
             set_dnf_false = set([word.strip() for word in str(boolalg.to_dnf("(" + ") & (".join([" | ".join(a) for a in [[a[2:] if a[0:2] == "n_" else "n_" + a for a in aa] for aa in dnf_perf_n]]) + ")")).split("|")])
-            
+
+            if len(set_dnf_false) == 1 and list(set_dnf_false)[0] != "(":
+                set_dnf_false = set(["(" + list(set_dnf_false)[0] + ")"])
             dnf_common = set_dnf_true & set_dnf_false
         else:
             dnf_common = set_dnf_true
             
-        self.expression = " | ".join(dnf_common)
+        self.expression = " | ".join(dnf_common) if check_false else " | ".join(set_dnf_true)
 #         print("set_dnf_true", set_dnf_true)
 #         print("set_dnf_false", set_dnf_false)
             
@@ -207,7 +209,6 @@ class DNF_Regression_solver:
         print("Unsolved variables - " + str(len(not_picked)) + "/" + str(len(inp[0])-1))
         print("--------------------------------")
         print(not_picked)
-
 
 
 file_path = '/kaggle/input/tomio2/dnf_regression.txt'
