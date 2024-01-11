@@ -1,15 +1,19 @@
 # Name: DNF_Regression_solver
 # Author: tomio kobayashi
-# Version: 2.1.7
+# Version: 2.1.9
 # Date: 2024/01/11
 
 import itertools
 from sympy.logic import boolalg
+import numpy as np
 
 class DNF_Regression_solver:
 # This version has no good matches
 # Instead, all true matches are first added, and some are removed when 
 # false unmatch exists and there is no corresponding other rule
+    def __init__(self):
+        self.expression = ""
+        
     def convTuple2bin(t, width):
         i = 1
         ret = 0
@@ -18,7 +22,37 @@ class DNF_Regression_solver:
             ret = ret | ii
         return ret
 
-    def solve(file_path, max_dnf_len=6, check_negative=True, check_false=True, error_tolerance=0.02):
+    #     This needs to be separate function because the condition 
+    #     variables cannot have conflict with function variables.  Thus "__XXX__" format is used to prevent naming conflicts.    
+#     def myeval(__ccc___, __tokens___, __inp___):
+    def myeval(self, __ccc___, __tokens___):
+        for __jjjj___ in range(len(__tokens___)):
+            exec(__tokens___[__jjjj___] + " = " + str(__ccc___[__jjjj___]))
+        return eval(self.expression)
+            
+    def solve(self, inp, check_negative=True):
+        numvars = len(inp[0])
+        
+        if check_negative:
+            for i in range(numvars):
+                inp[0].insert(i+numvars, "n_" + inp[0][i])
+            for j in range(1, len(inp), 1):
+                for i in range(numvars):
+                    inp[j].insert(i+numvars,"0" if inp[j][i] == "1" else "1")
+            numvars *= 2
+        
+        tokens = [inp[0][i] for i in range(len(inp[0])-1)]
+#         inp_list = np.array([np.array([inp[i][j] for j in range(len(inp[i]))]) for i in range(1, len(inp), 1)])
+        inp_list = [[inp[i][j] for j in range(len(inp[i]))] for i in range(1, len(inp), 1)]
+        res = list(range(len(inp_list)))
+        for i in range(len(inp_list)):
+            res[i] = self.myeval(inp_list[i], tokens)
+
+        return res
+
+        
+        
+    def train(self, file_path, max_dnf_len=6, check_negative=True, check_false=True, error_tolerance=0.02):
 
 # file_path: input file in tab-delimited text
 # check_negative: enable to check the negative conditions or not.  This one is very heavy.
@@ -117,10 +151,10 @@ class DNF_Regression_solver:
                     r = [v for k,v in dic.items() if k & b == b]
                     if len(r) == 0:
                         continue
-                    if len([f for f in r if f == "1"]) > 0:
-#                     cnt_all = len([f for f in r])
-#                     cnt_unmatch = len([f for f in r if f == "1"])
-#                     if cnt_unmatch/cnt_all > error_tolerance:
+#                     if len([f for f in r if f == "1"]) > 0:
+                    cnt_all = len([f for f in r])
+                    cnt_unmatch = len([f for f in r if f == "1"])
+                    if cnt_unmatch/cnt_all > error_tolerance:
                         continue
 
                     raw_perf_n.append([ii for ii in p_list[i]])
@@ -139,6 +173,7 @@ class DNF_Regression_solver:
         else:
             dnf_common = set_dnf_true
             
+        self.expression = " | ".join(dnf_common)
 #         print("set_dnf_true", set_dnf_true)
 #         print("set_dnf_false", set_dnf_false)
             
@@ -176,4 +211,21 @@ class DNF_Regression_solver:
 
 
 file_path = '/kaggle/input/tomio2/dnf_regression.txt'
-DNF_Regression_solver.solve(file_path)
+
+reg = DNF_Regression_solver()
+reg.train(file_path, error_tolerance=0.03)
+
+
+with open(file_path, 'r') as f:
+    inp = [line.strip().split('\t') for line in f]
+
+answer = [int(inp[i][-1]) for i in range(1, len(inp), 1)]
+print("answer", answer)
+
+inp = [[inp[i][j] for j in range(len(inp[i])-1)] for i in range(len(inp))]
+
+  
+# print(inp)
+res = reg.solve(inp)
+print("res", res)
+
