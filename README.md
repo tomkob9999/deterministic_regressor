@@ -5,7 +5,8 @@ This tool generates a DNF expression by regressing the values of input Boolean v
 DNF Common should be considered reliable.  DNF TRUE should be considered strong candidates.  DNF FALSE are more of references.
 
 TO-DO:
-In future, it will be upgraded to be able to handle non-Boolean numeric input variables and result variable by discretizing them into segments.
+- enable to handle non-Boolean numeric input variables and result variable by discretizing them into segments
+- improve performance when negative insertion is inactive by replacing 0 and 1 for all cells for false DNF calculation
 
 HOW TO RUN:
 
