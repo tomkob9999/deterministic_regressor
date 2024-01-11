@@ -1,11 +1,15 @@
 # Name: DNF_Regression_solver
 # Author: tomio kobayashi
-# Version: 2.1.10
+# Version: 2.1.11
 # Date: 2024/01/11
 
 import itertools
 from sympy.logic import boolalg
 import numpy as np
+
+import sklearn.datasets
+import pandas as pd
+import random
 
 class DNF_Regression_solver:
 # This version has no good matches
@@ -50,9 +54,45 @@ class DNF_Regression_solver:
 
         return res
 
+    def generate_segment_ranks(df, num_segments, name):
+    #     df = pd.DataFrame({name: data})
+    #     print("df", df)
+        df[name + '_rank'] = pd.cut(df[name], bins=num_segments, labels=False)
+        df[name + '_label'] = pd.cut(df[name], bins=num_segments, labels=[f'{name} {i+1}' for i in range(num_segments)])
+        return df
+
+    def discretize_data(headers, values, byFour=1):
+
+    #     lst = [['apple', 'red', 11], ['grape', 'green', 22], ['orange', 'orange', 33], ['mango', 'yellow', 44]] 
+    #     data = pd.DataFrame(values, columns =headers, dtype = float) 
+        data = pd.DataFrame(values, columns=headers) 
+
+        cols = [c for c in data.columns]
+        for c in cols:
+            countNonBool = len(data[c]) - (data[c] == 0).sum() - (data[c] == 1).sum()
+            if countNonBool > 0 and pd.api.types.is_numeric_dtype(data[c]):
+                result_df = DNF_Regression_solver.generate_segment_ranks(data, byFour*4, c)
+                one_hot_df = pd.get_dummies(result_df[c + '_rank'], prefix=c)
+                one_hot_df = one_hot_df.astype(int)
+                data = pd.concat([result_df, one_hot_df], axis=1)
+
+        # data = data.filter(lambda col: (col == 0).all() or (col == 1).all())
+        # data = data.loc[:, (data == 0) | (data == 1).any()]
+
+        cols = [c for c in data.columns]
+        new_cols = []
+        for c in cols:
+            countNonBool = len(data[c]) - (data[c] == 0).sum() - (data[c] == 1).sum()
+            if countNonBool == 0 and pd.api.types.is_numeric_dtype(data[c]):
+                new_cols.append(c)
+
+        # print(new_cols)
+        data = data.filter(items=new_cols)
+
+        data_list = [data.columns.tolist()] + data.values.tolist()
+        return data_list
         
-        
-    def train(self, file_path, max_dnf_len=6, check_negative=True, check_false=True, error_tolerance=0.02):
+    def train(self, file_path=None, data_list=None, max_dnf_len=6, check_negative=True, check_false=True, error_tolerance=0.02):
 
 # file_path: input file in tab-delimited text
 # check_negative: enable to check the negative conditions or not.  This one is very heavy.
@@ -64,8 +104,12 @@ class DNF_Regression_solver:
         # file_path = '/kaggle/input/dnf-regression/dnf_regression.txt'
         # file_path = '/kaggle/input/tomio5/dnf_regression.txt'
 
-        with open(file_path, 'r') as f:
-            inp = [line.strip().split('\t') for line in f]
+        inp = None
+        if file_path is not None:
+            with open(file_path, 'r') as f:
+                inp = [line.strip().split('\t') for line in f]
+        else:
+            inp = data_list
 
         numvars = len(inp[1])-1
 
@@ -87,7 +131,8 @@ class DNF_Regression_solver:
         for i in range(1, len(inp), 1):
             s = ""
             for j in range(len(inp[i]) - 1):
-                s += inp[i][j]
+#                 s += inp[i][j]
+                s += str(inp[i][j])
             truefalse = inp[i][len(inp[i]) - 1]
             dic[int(s, 2)] = truefalse
             if truefalse == '1':
