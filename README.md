@@ -2,6 +2,8 @@
 
 This tool generates a DNF expression by regressing the values of input Boolean variables.  Overall, it works by creating DNF separately for true cases and false cases, and then find the common DNF factors.  The run time is exponential due to the parts that the combinations increase factorially as the input variable increases and that it converts fron cnf to dnf.
 
+DNF Common should be considered reliable.  DNF TRUE should be considered strong candidates.  DNF FALSE are more of references.
+
 TO-DO:
 In future, it will be upgraded to be able to handle non-Boolean numeric input variables and result variable by discretizing them into segments.
 
@@ -20,3 +22,7 @@ a	b	c	d	e	f	g	Res
 1	1	1	1	1	1	0	1
 
 1	1	1	1	1	0	1	1
+
+Sample image:
+
+![aa6](https://github.com/tomkob9999/dnf_regression_resolver/assets/96751911/3bc22090-5ed2-46b0-b5bb-a1998b539286)
