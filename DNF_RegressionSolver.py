@@ -1,6 +1,6 @@
 # Name: DNF_Regression_solver
 # Author: tomio kobayashi
-# Version: 2.2.0
+# Version: 2.2.1
 # Date: 2024/01/12
 
 import itertools
@@ -10,6 +10,7 @@ import numpy as np
 import sklearn.datasets
 import pandas as pd
 import random
+from sympy import simplify
 
 class DNF_Regression_solver:
 # This version has no good matches
@@ -18,6 +19,24 @@ class DNF_Regression_solver:
     def __init__(self):
         self.expression = ""
         
+    def cnf_to_dnf(cnf):
+        dnf_clauses = []
+
+        for clause in cnf:
+            dnf_clause = []
+            for literal in clause:
+                if isinstance(literal, tuple):  # Handle negation
+                    dnf_clause.append((literal[0], not literal[1]))
+                else:
+                    dnf_clause.append(literal)
+            dnf_clauses.append(dnf_clause)
+
+        dnf_result = []
+        for i in range(len(dnf_clauses[0])):
+            dnf_result.append([dnf_clauses[j][i] for j in range(len(dnf_clauses))])
+
+        return dnf_result
+
     def try_convert_to_numeric(text):
         for func in (int, float, complex):
             try:
@@ -193,6 +212,10 @@ class DNF_Regression_solver:
                 false_list.append(s)
 
         inp_oppo = [copy.deepcopy(inp[0])] + [[0 if m == 1 else 1 for m in inp[i]] for i in range(1, len(inp), 1)]
+        
+#         print("inp", inp[0:5])
+#         print("inp_oppo", inp_oppo[0:5])
+        
         for i in range(1, len(inp_oppo), 1):
             s = ""
             for j in range(len(inp_oppo[i]) - 1):
@@ -304,7 +327,7 @@ class DNF_Regression_solver:
                     for i in range(len(p_list)):
                         match_and_break = False
                         b = DNF_Regression_solver.convTuple2bin(p_list[i], numvars)
-                        for p in raw_perf2:
+                        for p in raw_perf2_n:
                             if p == b & p:
                                 match_and_break = True
                                 break
@@ -317,41 +340,58 @@ class DNF_Regression_solver:
         #                 if len([f for f in r if f == "0"]) > 0:
                         cnt_all = len([f for f in r])
         #                 cnt_unmatch = len([f for f in r if f == "0"])
-                        cnt_unmatch = len([f for f in r if f == 1])
+                        cnt_unmatch = len([f for f in r if f == 0])
                         if cnt_unmatch/cnt_all > error_tolerance:
                             continue
 
-                        raw_perf.append([ii for ii in p_list[i]])
-                        raw_perf2.append(b)
+                        raw_perf_n.append([ii for ii in p_list[i]])
+                        raw_perf2_n.append(b)  
                 
         
-        print("len(raw_perf_n)", len(raw_perf_n))
+#         print("len(raw_perf_n)", len(raw_perf_n))
         
         for dn in raw_perf_n:
             dnf_perf_n.append([inp[0][ii] for ii in dn])
 
         
         print("size of false dnf in negative form " + str(len(dnf_perf_n)))
-        if len(dnf_perf_n) > 100:
-            print("cutting to only 100 of false dnf in negative form randomly as they are too many")
+        if len(dnf_perf_n) > 1000:
+            print("cutting to only 1000 of false dnf in negative form randomly as they are too many")
 #             dnf_perf_n = dnf_perf_n[0:300]
-            dnf_perf_n = random.sample(dnf_perf_n, 100)
+            dnf_perf_n = random.sample(dnf_perf_n, 1000)
         
         set_dnf_true = set(["(" + s + ")" for s in [" & ".join(a) for a in dnf_perf]])
         dnf_common = None
         set_dnf_false = None
         if check_false:
-            cnf = "(" + ") & (".join([" | ".join(a) for a in [[a[2:] if a[0:2] == "n_" else "n_" + a for a in aa] for aa in dnf_perf_n]]) + ")"
+            cnf = None
+            if check_negative:
+                cnf = "(" + ") & (".join([" | ".join(a) for a in [[a[2:] if a[0:2] == "n_" else "n_" + a for a in aa] for aa in dnf_perf_n]]) + ")"
+                cnf_list = [(a[2:] if a[0:2] == "n_" else "n_" + a for a in aa) for aa in dnf_perf_n]
+            else:
+                cnf = "(" + ") & (".join([" | ".join(a) for a in [[a for a in aa] for aa in dnf_perf_n]]) + ")"
+                cnf_list = [(a for a in aa) for aa in dnf_perf_n]
 #             print("Simplifying CNF for false expressions..")
 #             cnf = str(boolalg.to_cnf(cnf, simplify=True, force=True))
 #             print("CNF", cnf)
+#             set_dnf_false = set([word.strip() for word in str(boolalg.to_dnf(cnf, simplify=True, force=True)).split("|")])
             print("Converting from CNF to DNF for false expressions..")
-            set_dnf_false = set([word.strip() for word in str(boolalg.to_dnf(cnf, simplify=True, force=True)).split("|")])
+            my_dnf = DNF_Regression_solver.cnf_to_dnf(cnf_list)
+#             print("my_dnf", my_dnf)
+            print("Simplifying CNF for false expressions..")
+#             cnf = simplify(cnf)
+#             print(cnf)
+#             set_dnf_false = set([word.strip() for word in str(boolalg.to_dnf(cnf, simplify=True, force=True)).split("|")])
+#             set_dnf_false = set(my_dnf)
+#             set_dnf_false = set([" & ".join(a) for a in [[a for a in aa] for aa in my_dnf]])
+            set_dnf_false = set(["(" + " & ".join(a) + ")" for a in [[a for a in aa] for aa in my_dnf]])
+#             set_dnf_false = set(["(" + s + ")" for s in [" & ".join(a) for a in my_dnf]])
+        
 #             print("CNF", "(" + ") & (".join([" | ".join(a) for a in [[a[2:] if a[0:2] == "n_" else "n_" + a for a in aa] for aa in dnf_perf_n]]) + ")")
 #             set_dnf_false = set([word.strip() for word in str(boolalg.to_dnf("(" + ") & (".join([" | ".join(a) for a in [[a[2:] if a[0:2] == "n_" else "n_" + a for a in aa] for aa in dnf_perf_n]]) + ")")).split("|")])
 
-            if len(set_dnf_false) == 1 and list(set_dnf_false)[0] != "(":
-                set_dnf_false = set(["(" + list(set_dnf_false)[0] + ")"])
+#             if len(set_dnf_false) == 1 and list(set_dnf_false)[0] != "(":
+#                 set_dnf_false = set(["(" + list(set_dnf_false)[0] + ")"])
             dnf_common = set_dnf_true & set_dnf_false
             print("DNF conversion completed")
 
@@ -392,7 +432,6 @@ class DNF_Regression_solver:
         print("Unsolved variables - " + str(len(not_picked)) + "/" + str(len(inp[0])-1))
         print("--------------------------------")
         print(not_picked)
-
 
 
 
