@@ -6,7 +6,7 @@ DNF Common should be considered reliable.  DNF TRUE should be considered strong 
 
 TO-DO-FUTURE:
 - enable to handle non-Boolean numeric input variables and result variable by discretizing them into segments
-DONE - replace solve() with train() and create solve() to be able to perform the regression
+- replace solve() with train() and create solve() to be able to perform the regression - DONE
 - improve performance when negative insertion is inactive by replacing 0 and 1 for all cells for false DNF calculation
 
 HOW TO RUN:
