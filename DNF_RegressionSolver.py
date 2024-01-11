@@ -1,6 +1,6 @@
 # Name: DNF_Regression_solver
 # Author: tomio kobayashi
-# Version: 2.2.1
+# Version: 2.2.2
 # Date: 2024/01/12
 
 import itertools
@@ -33,7 +33,7 @@ class DNF_Regression_solver:
 
         dnf_result = []
         for i in range(len(dnf_clauses[0])):
-            dnf_result.append([dnf_clauses[j][i] for j in range(len(dnf_clauses))])
+            dnf_result.append(sorted(list(set([dnf_clauses[j][i] for j in range(len(dnf_clauses))]))))
 
         return dnf_result
 
@@ -89,7 +89,7 @@ class DNF_Regression_solver:
         df[name + '_label'] = pd.cut(df[name], bins=num_segments, labels=[f'{name} {i+1}' for i in range(num_segments)])
         return df
 
-    def discretize_data(data_list, byFour=1):
+    def discretize_data(data_list, by_four=1):
 
     #     lst = [['apple', 'red', 11], ['grape', 'green', 22], ['orange', 'orange', 33], ['mango', 'yellow', 44]] 
     #     data = pd.DataFrame(values, columns =headers, dtype = float) 
@@ -116,7 +116,7 @@ class DNF_Regression_solver:
 #             print("countNonBool", countNonBool)
             if countNonBool > 0 and pd.api.types.is_numeric_dtype(data[c]):
 #             if countNonBool > 0:
-                result_df = DNF_Regression_solver.generate_segment_ranks(data, byFour*4, c)
+                result_df = DNF_Regression_solver.generate_segment_ranks(data, by_four*4, c)
                 one_hot_df = pd.get_dummies(result_df[c + '_rank'], prefix=c)
                 one_hot_df = one_hot_df.astype(int)
                 data = pd.concat([result_df, one_hot_df], axis=1)
@@ -153,7 +153,7 @@ class DNF_Regression_solver:
         
         return data_list
         
-    def train(self, file_path=None, data_list=None, max_dnf_len=6, check_negative=True, check_false=True, error_tolerance=0.02, byFour=1):
+    def train(self, file_path=None, data_list=None, max_dnf_len=6, check_false=True, check_negative=False, error_tolerance=0.02):
 
 # file_path: input file in tab-delimited text
 # check_negative: enable to check the negative conditions or not.  This one is very heavy.
@@ -242,10 +242,10 @@ class DNF_Regression_solver:
         for s in range(max_dnf_len):
             len_dnf = s + 1
             
-            print(str(len_dnf) + " variable patterns")
             l = [ii for ii in range(numvars)]
             p_list = list(itertools.combinations(l, len_dnf))
             if len(p_list) > 1000000:
+                print(str(len_dnf) + " variable patterns")
                 print("Skipping because " + str(len(p_list)) + " combinations is too many")
                 break
             true_test_pass = True
@@ -272,7 +272,9 @@ class DNF_Regression_solver:
                 raw_perf2.append(b)
         
         for dn in raw_perf:
-            dnf_perf.append([inp[0][ii] for ii in dn])
+#             dnf_perf.append([inp[0][ii] for ii in dn])
+#             print([inp[0][ii] for ii in dn])
+            dnf_perf.append(sorted(list(set([inp[0][ii] for ii in dn]))))
 
         print("size of true dnf " + str(len(dnf_perf)))
         
@@ -284,10 +286,10 @@ class DNF_Regression_solver:
             if check_negative:
                 for s in range(max_dnf_len):
                     len_dnf = s + 1
-                    print(str(len_dnf) + " variable patterns")
                     l = [ii for ii in range(numvars)]
                     p_list = list(itertools.combinations(l, len_dnf))
                     if len(p_list) > 1000000:
+                        print(str(len_dnf) + " variable patterns")
                         print("Skipping because " + str(len(p_list)) + " combinations is too many")
                         break
 
@@ -317,10 +319,10 @@ class DNF_Regression_solver:
                 for s in range(max_dnf_len):
                     len_dnf = s + 1
 
-                    print(str(len_dnf) + " variable patterns")
                     l = [ii for ii in range(numvars)]
                     p_list = list(itertools.combinations(l, len_dnf))
                     if len(p_list) > 1000000:
+                        print(str(len_dnf) + " variable patterns")
                         print("Skipping because " + str(len(p_list)) + " combinations is too many")
                         break
                     true_test_pass = True
@@ -355,10 +357,10 @@ class DNF_Regression_solver:
 
         
         print("size of false dnf in negative form " + str(len(dnf_perf_n)))
-        if len(dnf_perf_n) > 1000:
-            print("cutting to only 1000 of false dnf in negative form randomly as they are too many")
+        if len(dnf_perf_n) > 10000:
+            print("cutting to only 10000 of false dnf in negative form randomly as they are too many")
 #             dnf_perf_n = dnf_perf_n[0:300]
-            dnf_perf_n = random.sample(dnf_perf_n, 1000)
+            dnf_perf_n = random.sample(dnf_perf_n, 10000)
         
         set_dnf_true = set(["(" + s + ")" for s in [" & ".join(a) for a in dnf_perf]])
         dnf_common = None
@@ -432,8 +434,6 @@ class DNF_Regression_solver:
         print("Unsolved variables - " + str(len(not_picked)) + "/" + str(len(inp[0])-1))
         print("--------------------------------")
         print(not_picked)
-
-
 
 
 file_path = '/kaggle/input/tomio2/dnf_regression.txt'
