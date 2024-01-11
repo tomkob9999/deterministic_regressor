@@ -1,6 +1,6 @@
 # Name: DNF_Regression_solver
 # Author: tomio kobayashi
-# Version: 2.2.3
+# Version: 2.2.4
 # Date: 2024/01/12
 
 import itertools
@@ -36,8 +36,9 @@ class DNF_Regression_solver:
             dnf_clauses.append(dnf_clause)
 
         dnf_result = []
-        for i in range(len(dnf_clauses[0])):
-            dnf_result.append(sorted(list(set([dnf_clauses[j][i] for j in range(len(dnf_clauses))]))))
+        if len(dnf_clauses) > 0:
+            for i in range(len(dnf_clauses[0])):
+                dnf_result.append(sorted(list(set([dnf_clauses[j][i] for j in range(len(dnf_clauses))]))))
 
         return dnf_result
 
@@ -91,6 +92,11 @@ class DNF_Regression_solver:
         elif used_expression == "union":
             self.expression = self.expression_union
             
+#         print("self.expression_common", self.expression_common)
+#         print("self.expression_true", self.expression_true)
+#         print("self.expression_false", self.expression_false)
+#         print("self.expression_union", self.expression_union)
+        
         print("Solver Expression:")
         print(self.expression)
         for i in range(len(inp_list)):
@@ -155,7 +161,7 @@ class DNF_Regression_solver:
         
         return data_list
         
-    def train(self, file_path=None, data_list=None, max_dnf_len=6, check_false=True, check_negative=False, error_tolerance=0.02):
+    def train(self, file_path=None, data_list=None, max_dnf_len=4, check_false=True, check_negative=False, error_tolerance=0.02, by_four=1):
 
 # file_path: input file in tab-delimited text
 # check_negative: enable to check the negative conditions or not.  This one is very heavy.
@@ -176,7 +182,7 @@ class DNF_Regression_solver:
 
         print("Discretizing...")
         inp = [[DNF_Regression_solver.try_convert_to_numeric(inp[i][j]) for j in range(len(inp[i]))] for i in range(len(inp))]
-        inp = DNF_Regression_solver.discretize_data(inp)
+        inp = DNF_Regression_solver.discretize_data(inp, by_four)
         print("")
         print("Columns:")
         print(inp[0])
@@ -361,6 +367,8 @@ class DNF_Regression_solver:
         
         self.expression_common = " | ".join(dnf_common)
         self.expression_true = " | ".join(set_dnf_true)
+        if self.expression == "":
+            self.expression = self.expression_true
         self.expression_false = " | ".join(set_dnf_false)
         self.expression_union = " | ".join(set_dnf_true | set_dnf_false)
         
@@ -372,6 +380,7 @@ class DNF_Regression_solver:
 
             if len(dnf_common) > 0:
                 print(" | ".join(dnf_common))
+            
             
         print("")
         print("DNF TRUE - " + str(len(set_dnf_true)))
@@ -394,7 +403,9 @@ class DNF_Regression_solver:
         print("Unsolved variables - " + str(len(not_picked)) + "/" + str(len(inp[0])-1))
         print("--------------------------------")
         print(not_picked)
-
+        print("")
+        
+        return inp
 
 
 
