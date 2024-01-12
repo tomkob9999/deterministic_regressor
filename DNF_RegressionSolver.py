@@ -210,11 +210,11 @@ class DNF_Regression_solver:
         else:
             inp = data_list
 
-############## TO BE REMOVED ############## 
-        print("num recs before", len(inp))
-        inp = DNF_Regression_solver.reduce_rows_except_first(inp, 20)
-        print("num recs after", len(inp))
-############## TO BE REMOVED ############## 
+# ############## TO BE REMOVED ############## 
+#         print("num recs before", len(inp))
+#         inp = DNF_Regression_solver.reduce_rows_except_first(inp, 20)
+#         print("num recs after", len(inp))
+# ############## TO BE REMOVED ############## 
 
 
         inp = [[DNF_Regression_solver.try_convert_to_numeric(inp[i][j]) for j in range(len(inp[i]))] for i in range(len(inp))]
@@ -454,7 +454,6 @@ class DNF_Regression_solver:
         print("")
         
         return inp
-
 
 
 
