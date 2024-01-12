@@ -1,6 +1,6 @@
 # Name: DNF_Regression_solver
 # Author: tomio kobayashi
-# Version: 2.2.5
+# Version: 2.2.6
 # Date: 2024/01/12
 
 import itertools
@@ -62,11 +62,17 @@ class DNF_Regression_solver:
     #     This needs to be separate function because the condition 
     #     variables cannot have conflict with function variables.  Thus "__XXX__" format is used to prevent naming conflicts.    
 #     def myeval(__ccc___, __tokens___, __inp___):
-    def myeval(self, __ccc___, __tokens___):
+#     def myeval(self, __ccc___, __tokens___):
+#         for __jjjj___ in range(len(__tokens___)):
+#             exec(__tokens___[__jjjj___] + " = " + str(__ccc___[__jjjj___]))
+#         return eval(self.expression)
+            
+    def myeval(__ccc___, __tokens___, ______s____):
         for __jjjj___ in range(len(__tokens___)):
             exec(__tokens___[__jjjj___] + " = " + str(__ccc___[__jjjj___]))
-        return eval(self.expression)
+        return eval(______s____)
             
+        
     def solve(self, inp, check_negative=True, used_expression=""):
         numvars = len(inp[0])
         
@@ -83,7 +89,7 @@ class DNF_Regression_solver:
         inp_list = [[inp[i][j] for j in range(len(inp[i]))] for i in range(1, len(inp), 1)]
         res = list(range(len(inp_list)))
         
-        if self.expression == "" or used_expression == "common":
+        if used_expression == "" or used_expression == "common":
             self.expression = self.expression_common
         elif used_expression == "true":
             self.expression = self.expression_true
@@ -91,16 +97,23 @@ class DNF_Regression_solver:
             self.expression = self.expression_false
         elif used_expression == "union":
             self.expression = self.expression_union
-            
+
+        
 #         print("self.expression_common", self.expression_common)
 #         print("self.expression_true", self.expression_true)
 #         print("self.expression_false", self.expression_false)
 #         print("self.expression_union", self.expression_union)
         
+        
+        if self.expression == "":
+            print("The expression is not available")
+            return []
+        
         print("Solver Expression:")
         print(self.expression)
         for i in range(len(inp_list)):
-            res[i] = self.myeval(inp_list[i], tokens)
+#             res[i] = self.myeval(inp_list[i], tokens)
+            res[i] = DNF_Regression_solver.myeval(inp_list[i], tokens, self.expression)
 
         return res
 
@@ -164,7 +177,20 @@ class DNF_Regression_solver:
             data_list[i+1].append(result_values[i])
         
         return data_list
-        
+
+    def reduce_rows_except_first(matrix, percentage):
+        if not (0 <= percentage <= 100):
+            raise ValueError("Percentage must be between 0 and 100")
+
+        # Ensure the first row is always included
+        num_rows_to_keep = max(1, int(len(matrix) * (1 - percentage / 100)))
+
+        # Sample remaining rows
+        sampled_rows = [matrix[0]] + random.sample(matrix[1:], num_rows_to_keep - 1)
+
+        return sampled_rows
+
+    
     def train(self, file_path=None, data_list=None, max_dnf_len=4, check_false=True, check_negative=False, error_tolerance=0.02, by_four=1):
 
 # file_path: input file in tab-delimited text
@@ -183,6 +209,13 @@ class DNF_Regression_solver:
                 inp = [line.strip().split('\t') for line in f]
         else:
             inp = data_list
+
+############## TO BE REMOVED ############## 
+        print("num recs before", len(inp))
+        inp = DNF_Regression_solver.reduce_rows_except_first(inp, 20)
+        print("num recs after", len(inp))
+############## TO BE REMOVED ############## 
+
 
         inp = [[DNF_Regression_solver.try_convert_to_numeric(inp[i][j]) for j in range(len(inp[i]))] for i in range(len(inp))]
         
@@ -421,6 +454,8 @@ class DNF_Regression_solver:
         print("")
         
         return inp
+
+
 
 
 
