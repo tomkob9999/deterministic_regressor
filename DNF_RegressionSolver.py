@@ -1,6 +1,6 @@
 # Name: DNF_Regression_solver
 # Author: tomio kobayashi
-# Version: 2.2.6
+# Version: 2.2.7
 # Date: 2024/01/12
 
 import itertools
@@ -73,20 +73,35 @@ class DNF_Regression_solver:
         return eval(______s____)
             
         
-    def solve(self, inp, check_negative=True, used_expression=""):
-        numvars = len(inp[0])
+    def solve(self, inp_p, check_negative=True, used_expression=""):
+#         print("SOLVE")
         
+        inp = copy.deepcopy(inp_p)
+        
+#         print("inp[0]", inp[0])
+        numvars = len(inp[0])
+
         if check_negative:
             for i in range(numvars):
                 inp[0].insert(i+numvars, "n_" + inp[0][i])
+#                 inp[0].insert(i+numvars-1, "n_" + inp[0][i])
             for j in range(1, len(inp), 1):
                 for i in range(numvars):
                     inp[j].insert(i+numvars,"0" if inp[j][i] == "1" else "1")
+#                     inp[j].insert(i+numvars-1,"0" if inp[j][i] == "1" else "1")
             numvars *= 2
         
-        tokens = [inp[0][i] for i in range(len(inp[0])-1)]
+        
+#         tokens = [inp[0][i] for i in range(len(inp[0])-1)]
+#         tokens = [inp[0][i] for i in range(numvars-1)]
+#         tokens = inp[0][:-1]
+        tokens = inp[0]
+#         print("tokens", tokens)
 #         inp_list = np.array([np.array([inp[i][j] for j in range(len(inp[i]))]) for i in range(1, len(inp), 1)])
-        inp_list = [[inp[i][j] for j in range(len(inp[i]))] for i in range(1, len(inp), 1)]
+#         inp_list = [[inp[i][j] for j in range(len(inp[i]))] for i in range(1, len(inp), 1)]
+#         inp_list = [[inp[i][j] for j in range(len(inp[i]))] for i in range(1, len(inp), 1)]
+#         inp_list = [row[:-1] for row in inp[1:]]
+        inp_list = [row for row in inp[1:]]
         res = list(range(len(inp_list)))
         
         if used_expression == "" or used_expression == "common":
@@ -211,9 +226,9 @@ class DNF_Regression_solver:
             inp = data_list
 
 # ############## TO BE REMOVED ############## 
-#         print("num recs before", len(inp))
-#         inp = DNF_Regression_solver.reduce_rows_except_first(inp, 20)
-#         print("num recs after", len(inp))
+        print("num recs before", len(inp))
+        inp = DNF_Regression_solver.reduce_rows_except_first(inp, 20)
+        print("num recs after", len(inp))
 # ############## TO BE REMOVED ############## 
 
 
