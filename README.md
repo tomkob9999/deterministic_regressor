@@ -4,7 +4,16 @@ This is a deductive ML model based on deterministic approach unlike much of exis
 
 This tool generates a DNF expression by regressing the values of input Boolean variables.  Overall, it works by creating DNF separately for true cases and false cases, and then find the common DNF factors.  The run time is exponential due to the parts that the combinations increase factorially as the input variable increases and that it converts fron cnf to dnf.
 
-DNF Common should be considered reliable.  DNF TRUE and DNF FALSE are good candidates.  DNF TRUE is susceptible to false positives and DNF FALSE are susceptible to false negatives.  So, DNS Common is ideal, but as the train data can may not be sufficient as always the case, they may be used instead.  DNS UNION that contains union of both DNS TRUE and DNS FALSE is available as well.
+It generates 4 logic expressions by train.  The DNF core is used as default for solve.
+- DNF COMMON: The common clauses between TRUE and FALSE.  Most conservateve to judge as true.
+- DNF TRUE: The logic expression is derived for true judgements.  This is more aggressive to judge as true than FALSE.
+- DNF FALSE: The logic expression is derived for false judgements.  This is less aggressive to judge as true than TRUE.
+- DNF UNION: The combination of TRUE and FALSE.  This is most aggressive to judge as true.
+
+Here is the aggressiveness to judge as true.
+
+DNF COMMON < DNF FALSE < DNF TRUE < DNF UNION
+
 
 TO-DO-FUTURE:
 - n/a
