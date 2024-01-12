@@ -4,15 +4,17 @@ This is a deductive ML model based on deterministic approach unlike much of exis
 
 This tool generates a boolean expression by regressing the values of input Boolean variables.  Overall, it works by creating logic expressions separately for true cases and false cases.
 
-It generates 4 logic expressions by train.  The DNF core is used as default for solve.
-- COMMON: Judged true when both TRUE DNF and FALSE CNF match
+It generates 2 logic expressions by train.
 - TRUE DNF: The logic expression is derived for true judgements.  
 - FALSE CNF: The logic expression is derived for false judgements.  
-- UNION: Judged true when either TRUE DNF or FALSE CNF matches
 
-Here is the aggressiveness to judge as true.
+It has 4 options for solve.
+- UNION: union of TRUE DNF and FALSE CNF
+- TRUE: TRUE DNF only
+- FALSE: FALSE CNF only
+- COMMON: intersection of TRUE DNF and FALSE CNF
 
-COMMON < FALSE CNF = TRUE DNF < UNION
+The UNION is the default option.  With the confidence threshold (defaulted to 3) properly set, it combines the best of both TRUE DNF and FALSE CNF.  The confidence threshold can be set to lower or higher based on the input data during training (not solve).  It can be as low as 0, but I think no need to set higher than 5 in normal settings.
 
 
 TO-DO-FUTURE:
