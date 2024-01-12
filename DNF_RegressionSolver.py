@@ -1,6 +1,6 @@
 # Name: DNF_Regression_solver
 # Author: tomio kobayashi
-# Version: 2.4.3
+# Version: 2.4.4
 # Date: 2024/01/13
 
 import itertools
@@ -115,7 +115,7 @@ class DNF_Regression_solver:
         return eval(______s____)
             
         
-    def solve(self, inp_p, check_negative=True, use_expression="true", confidence_thresh=0):
+    def solve(self, inp_p, check_negative=True, use_expression="union", confidence_thresh=3):
         inp = [[DNF_Regression_solver.try_convert_to_numeric(inp_p[i][j]) for j in range(len(inp_p[i]))] for i in range(len(inp_p))]
         
         print("Input Records:", len(inp)-1)
@@ -291,11 +291,11 @@ class DNF_Regression_solver:
         else:
             inp = data_list
 
-# ############## TO BE REMOVED ############## 
+# # ############## TO BE REMOVED ############## 
 #         print("num recs before", len(inp))
-#         inp = DNF_Regression_solver.reduce_rows_except_first(inp, 30)
+#         inp = DNF_Regression_solver.reduce_rows_except_first(inp, 40)
 #         print("num recs after", len(inp))
-# ############## TO BE REMOVED ############## 
+# # ############## TO BE REMOVED ############## 
 
         print("Train Records:", len(inp)-1)
     
@@ -393,7 +393,7 @@ class DNF_Regression_solver:
                 raw_perf.append([ii for ii in p_list[i]])
                 raw_perf2.append(b)
 
-                self.true_confidence["(" + " & ".join(sorted(list(set([inp[0][ii] for ii in p_list[i]])))) + ")"] = cnt_all if cnt_unmatch == 0 else cnt_all/cnt_unmatch
+                self.true_confidence["(" + " & ".join(sorted(list(set([inp[0][ii] for ii in p_list[i]])))) + ")"] = cnt_all if cnt_unmatch == 0 else cnt_all/cnt_unmatch(cnt_unmatch+1)
         
 #         print("true_confidence", self.true_confidence)
         
