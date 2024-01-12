@@ -1,6 +1,6 @@
 # Name: DNF_Regression_solver
 # Author: tomio kobayashi
-# Version: 2.3.0
+# Version: 2.4.0
 # Date: 2024/01/12
 
 import itertools
@@ -17,30 +17,30 @@ class DNF_Regression_solver:
 # Instead, all true matches are first added, and some are removed when 
 # false unmatch exists and there is no corresponding other rule
     def __init__(self):
-        self.expression = ""
-        self.expression_common = ""
+#         self.expression = ""
+#         self.expression_common = ""
         self.expression_true = ""
         self.expression_false = ""
-        self.expression_union = ""
+#         self.expression_union = ""
         
-    def cnf_to_dnf(cnf):
-        dnf_clauses = []
+#     def cnf_to_dnf(cnf):
+#         dnf_clauses = []
 
-        for clause in cnf:
-            dnf_clause = []
-            for literal in clause:
-                if isinstance(literal, tuple):  # Handle negation
-                    dnf_clause.append((literal[0], not literal[1]))
-                else:
-                    dnf_clause.append(literal)
-            dnf_clauses.append(dnf_clause)
+#         for clause in cnf:
+#             dnf_clause = []
+#             for literal in clause:
+#                 if isinstance(literal, tuple):  # Handle negation
+#                     dnf_clause.append((literal[0], not literal[1]))
+#                 else:
+#                     dnf_clause.append(literal)
+#             dnf_clauses.append(dnf_clause)
 
-        dnf_result = []
-        if len(dnf_clauses) > 0:
-            for i in range(len(dnf_clauses[0])):
-                dnf_result.append(sorted(list(set([dnf_clauses[j][i] for j in range(len(dnf_clauses))]))))
+#         dnf_result = []
+#         if len(dnf_clauses) > 0:
+#             for i in range(len(dnf_clauses[0])):
+#                 dnf_result.append(sorted(list(set([dnf_clauses[j][i] for j in range(len(dnf_clauses))]))))
 
-        return dnf_result
+#         return dnf_result
     
     def remove_supersets(sets_list):
         result = []
@@ -49,22 +49,69 @@ class DNF_Regression_solver:
                 result.append(s)
         return result
 
-    def simplify_dnf(s):
+#     def cnf_to_dnfx(cnf):
+#         dnf = []
+#         for clause in cnf:
+#             dnf_clause = []
+#             for literal in clause:
+# #                 dnf_clause.append([literal])
+#                 dnf_clause.append(literal)
+#             dnf.append(dnf_clause)
+#     #     return [list(x) for x in itertools.product(*dnf)]
+#         dnfl = [list(x) for x in itertools.product(*dnf)]
+# #         dnfl = [["".join(dd) for dd in d] for d in dnfl]
+#         dnfl = [set(d) for d in dnfl]
+#         filtered_sets = DNF_Regression_solver.remove_supersets(dnfl)
+#         filtered_lists = [sorted(list(f)) for f in sorted(filtered_sets)]
+# #         filtered_lists = [" & ".join(f) for f in sorted(filtered_lists)]
+# #         str = "(" + ") | (".join(filtered_lists) + ")"
+# #     #     print("str", str)
+# #         return str
+#         return filtered_lists
+
+
+#     def simplify_dnf(s):
+#         if s.strip() == "":
+#             return ""
+#         ss = s.split("|")
+#         ss = [s.strip() for s in ss]
+#         ss = [s[1:-1] if s[0] == "(" else s for s in ss]
+#         ss = [s.split("&") for s in ss]
+#         ss = [[sss.strip() for sss in s] for s in ss]
+#         ss = [set(s) for s in ss]
+
+#         filtered_sets = DNF_Regression_solver.remove_supersets(ss)
+#         filtered_lists = [sorted(list(f)) for f in sorted(filtered_sets)]
+#         filtered_lists = [" & ".join(f) for f in sorted(filtered_lists)]
+#         str = "(" + ") | (".join(filtered_lists) + ")"
+#         return str
+    
+    def simplify_dnf(s, use_cnf=False):
+        tok1 = "|"
+        tok2 = "&"
+        if use_cnf:
+            tok1 = "&"
+            tok2 = "|"
+#         print("s", s)
         if s.strip() == "":
             return ""
-        ss = s.split("|")
+        ss = s.split(tok1)
         ss = [s.strip() for s in ss]
         ss = [s[1:-1] if s[0] == "(" else s for s in ss]
-        ss = [s.split("&") for s in ss]
+        ss = [s.split(tok2) for s in ss]
         ss = [[sss.strip() for sss in s] for s in ss]
         ss = [set(s) for s in ss]
 
+#         print("ss", ss)
         filtered_sets = DNF_Regression_solver.remove_supersets(ss)
+#         print("filtered_sets", filtered_sets)
         filtered_lists = [sorted(list(f)) for f in sorted(filtered_sets)]
-        filtered_lists = [" & ".join(f) for f in sorted(filtered_lists)]
-        str = "(" + ") | (".join(filtered_lists) + ")"
+#         print("filtered_lists", filtered_lists)
+        filtered_lists = [(" " + tok2 + " ").join(f) for f in sorted(filtered_lists)]
+#         print("filtered_lists", filtered_lists)
+        str = "(" + (") " + tok1 + " (").join(filtered_lists) + ")"
+#         print("str", str)
         return str
-
 
     def try_convert_to_numeric(text):
         for func in (int, float, complex):
@@ -97,10 +144,11 @@ class DNF_Regression_solver:
         return eval(______s____)
             
         
-    def solve(self, inp_p, check_negative=True, used_expression=""):
+    def solve(self, inp_p, check_negative=True, use_expression="true"):
 #         print("SOLVE")
         
-        inp = copy.deepcopy(inp_p)
+#         inp = copy.deepcopy(inp_p)
+        inp = [[DNF_Regression_solver.try_convert_to_numeric(inp_p[i][j]) for j in range(len(inp_p[i]))] for i in range(len(inp_p))]
         
 #         print("inp[0]", inp[0])
         numvars = len(inp[0])
@@ -111,7 +159,8 @@ class DNF_Regression_solver:
 #                 inp[0].insert(i+numvars-1, "n_" + inp[0][i])
             for j in range(1, len(inp), 1):
                 for i in range(numvars):
-                    inp[j].insert(i+numvars,"0" if inp[j][i] == "1" else "1")
+#                     inp[j].insert(i+numvars,"0" if inp[j][i] == "1" else "1")
+                    inp[j].insert(i+numvars,0 if inp[j][i] == 1 else 1)
 #                     inp[j].insert(i+numvars-1,"0" if inp[j][i] == "1" else "1")
             numvars *= 2
         
@@ -126,16 +175,23 @@ class DNF_Regression_solver:
 #         inp_list = [[inp[i][j] for j in range(len(inp[i]))] for i in range(1, len(inp), 1)]
 #         inp_list = [row[:-1] for row in inp[1:]]
         inp_list = [row for row in inp[1:]]
+    
+#         inp_list_oppo = [[0 if m == 1 else 1 for m in inp[i]] for i in range(1, len(inp), 1)]
+#         inp_list_oppo = [[0 if m == 1 else 1 for m in inp_list[i]] for i in range(len(inp_list))]
+        
+#         print("inp_list", inp_list)
+#         print("inp_list_oppo", inp_list_oppo)
+        
         res = list(range(len(inp_list)))
         
-        if used_expression == "" or used_expression == "common":
-            self.expression = self.expression_common
-        elif used_expression == "true":
-            self.expression = self.expression_true
-        elif used_expression == "false":
-            self.expression = self.expression_false
-        elif used_expression == "union":
-            self.expression = self.expression_union
+#         if used_expression == "" or used_expression == "common":
+#             self.expression = self.expression_common
+#         elif used_expression == "true":
+#             self.expression = self.expression_true
+#         elif used_expression == "false":
+#             self.expression = self.expression_false
+#         elif used_expression == "union":
+#             self.expression = self.expression_union
 
         
 #         print("self.expression_common", self.expression_common)
@@ -144,16 +200,26 @@ class DNF_Regression_solver:
 #         print("self.expression_union", self.expression_union)
         
         
-        if self.expression == "":
-            print("The expression is not available")
-            return []
-        
-        print("Solver Expression:")
-        print(self.expression)
-        for i in range(len(inp_list)):
-#             res[i] = self.myeval(inp_list[i], tokens)
-            res[i] = DNF_Regression_solver.myeval(inp_list[i], tokens, self.expression)
+#         if self.expression == "":
+#             print("The expression is not available")
+#             return []
 
+        expr = ""
+
+        if use_expression == "true":
+            expr = self.expression_true
+        elif use_expression == "false":
+            expr = self.expression_false
+        elif use_expression == "common":
+            expr = "(" + self.expression_true + ") & (" + self.expression_false + ")"
+        else: # union case
+            expr = "(" + self.expression_true + ") | (" + self.expression_false + ")"
+                
+        print("Solver Expression:")
+        print(expr)
+        
+        for i in range(len(inp_list)):
+            res[i] = DNF_Regression_solver.myeval(inp_list[i], tokens, expr)
         return res
 
     def generate_segment_ranks(df, num_segments, name):
@@ -230,7 +296,7 @@ class DNF_Regression_solver:
         return sampled_rows
 
     
-    def train(self, file_path=None, data_list=None, max_dnf_len=4, check_false=True, check_negative=False, error_tolerance=0.02, by_four=1, min_match=3):
+    def train(self, file_path=None, data_list=None, max_dnf_len=4, check_false=True, check_negative=False, error_tolerance=0.02, by_four=1, min_match=3, use_approx_dnf=False):
 
 # file_path: input file in tab-delimited text
 # check_negative: enable to check the negative conditions or not.  This one is very heavy.
@@ -406,9 +472,9 @@ class DNF_Regression_solver:
                     true_test_pass = True
                     for i in range(len(p_list)):
                         match_and_break = False
-                        print(p_list[i], "p_list")
-                        if (3,4) == p_list[i]:
-                            print("found p_list")
+#                         print(p_list[i], "p_list")
+#                         if (3,4) == p_list[i]:
+#                             print("found p_list")
                         b = DNF_Regression_solver.convTuple2bin(p_list[i], numvars)
                         for p in raw_perf2_n:
                             if p == b & p:
@@ -445,47 +511,62 @@ class DNF_Regression_solver:
         set_dnf_false = None
         if check_false:
             cnf = None
+            cnf_list = None
             if check_negative:
                 cnf = "(" + ") & (".join([" | ".join(a) for a in [[a[2:] if a[0:2] == "n_" else "n_" + a for a in aa] for aa in dnf_perf_n]]) + ")"
-                cnf_list = [(a[2:] if a[0:2] == "n_" else "n_" + a for a in aa) for aa in dnf_perf_n]
+#                 cnf_list = [(a[2:] if a[0:2] == "n_" else "n_" + a for a in aa) for aa in dnf_perf_n]
+                set_cnf_false = [[a[2:] if a[0:2] == "n_" else "n_" + a for a in aa] for aa in dnf_perf_n]
             else:
                 cnf = "(" + ") & (".join([" | ".join(a) for a in [[a for a in aa] for aa in dnf_perf_n]]) + ")"
-                cnf_list = [(a for a in aa) for aa in dnf_perf_n]
+#                 cnf_list = [(a for a in aa) for aa in dnf_perf_n]
+                set_cnf_false = [[a for a in aa] for aa in dnf_perf_n]
 #             cnf = str(boolalg.to_cnf(cnf, simplify=True, force=True))
 #             set_dnf_false = set([word.strip() for word in str(boolalg.to_dnf(cnf, simplify=True, force=True)).split("|")])
-            print("Converting from CNF to DNF for false expressions..")
-            my_dnf = DNF_Regression_solver.cnf_to_dnf(cnf_list)
-            set_dnf_false = set(["(" + " & ".join(a) + ")" for a in [[a for a in aa] for aa in my_dnf]])
-            dnf_common = set_dnf_true & set_dnf_false
+#             print("Converting from CNF to DNF for false expressions..")
+#             print("cnf", cnf)
+#             print("cnf_list2", cnf_list2)
+#             for c in cnf_list:
+#                 print("c", c)
+#             my_dnf = None
+#             if use_approx_dnf:
+#                 my_dnf = DNF_Regression_solver.cnf_to_dnf(cnf_list)
+#             else:
+#                 my_dnf = DNF_Regression_solver.cnf_to_dnfx(cnf_list2)
+#             set_dnf_false = set(["(" + " & ".join(a) + ")" for a in [[a for a in aa] for aa in my_dnf]])
+#             print("my_dnf", my_dnf)
+#             print("set_dnf_false", set_dnf_false)
+#             dnf_common = set_dnf_true & set_dnf_false
 
-        else:
-            dnf_common = set_dnf_true
+#         else:
+#             dnf_common = set_dnf_true
             
 #         print("dnf_common", dnf_common)
 #         print("set_dnf_true", set_dnf_true)
 #         print("set_dnf_false", set_dnf_false)
 #         print("set_dnf_true & set_dnf_false", set_dnf_true & set_dnf_false)
         
-        self.expression = " | ".join(dnf_common)
-        self.expression_common = " | ".join(dnf_common)
-        self.expression_common = DNF_Regression_solver.simplify_dnf(self.expression_common)
+#         self.expression = " | ".join(dnf_common)
+#         self.expression_common = " | ".join(dnf_common)
+#         self.expression_common = DNF_Regression_solver.simplify_dnf(self.expression_common)
         self.expression_true = " | ".join(set_dnf_true)
         self.expression_true = DNF_Regression_solver.simplify_dnf(self.expression_true)
-        if self.expression == "":
-            self.expression = self.expression_true
-        self.expression_false = " | ".join(set_dnf_false)
-        self.expression_false = DNF_Regression_solver.simplify_dnf(self.expression_false)
-        self.expression_union = " | ".join(set_dnf_true | set_dnf_false)
-        self.expression_union = DNF_Regression_solver.simplify_dnf(self.expression_union)
+#         if self.expression == "":
+#             self.expression = self.expression_true
+#         self.expression_false = " | ".join(set_cnf_false)
+#         self.expression_false = cnf
+        self.expression_false = DNF_Regression_solver.simplify_dnf(cnf, use_cnf=True)
+#         self.expression_false = DNF_Regression_solver.simplify_dnf(self.expression_false)
+#         self.expression_union = " | ".join(set_dnf_true | set_dnf_false)
+#         self.expression_union = DNF_Regression_solver.simplify_dnf(self.expression_union)
         
-        if check_false:
-            print("")
-            print("DNF COMMON - " + str(len(dnf_common)))
-            print("--------------------------------")
+#         if check_false:
+#             print("")
+#             print("DNF COMMON - " + str(len(dnf_common)))
+#             print("--------------------------------")
 
-            if len(dnf_common) > 0:
-#                 print(" | ".join(dnf_common))
-                print(self.expression_common)
+#             if len(dnf_common) > 0:
+# #                 print(" | ".join(dnf_common))
+#                 print(self.expression_common)
             
             
         print("")
@@ -498,9 +579,9 @@ class DNF_Regression_solver:
 
         if check_false:
             print("")
-            print("DNF FALSE - " + str(len(set_dnf_false)))
+            print("CNF FALSE - " + str(len(set_cnf_false)))
             print("--------------------------------")
-            if len(set_dnf_false) > 0:
+            if len(set_cnf_false) > 0:
 #                 print(" | ".join(set_dnf_false))
                 print(self.expression_false)
             
@@ -514,7 +595,6 @@ class DNF_Regression_solver:
         print("")
         
         return inp
-
 
 
 
@@ -533,7 +613,7 @@ answer = [int(inp[i][-1]) for i in range(1, len(inp), 1)]
 inp = [row[:-1] for row in inp]
   
 # print(inp)
-res = reg.solve(inp, used_expression="false")
+res = reg.solve(inp, use_expression="false")
 # res = reg.solve(inp)
 print("Predicted")
 print(res)
