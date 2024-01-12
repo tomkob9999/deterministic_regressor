@@ -1,6 +1,6 @@
 # Name: DNF_Regression_solver
 # Author: tomio kobayashi
-# Version: 2.2.9
+# Version: 2.3.0
 # Date: 2024/01/12
 
 import itertools
@@ -41,6 +41,30 @@ class DNF_Regression_solver:
                 dnf_result.append(sorted(list(set([dnf_clauses[j][i] for j in range(len(dnf_clauses))]))))
 
         return dnf_result
+    
+    def remove_supersets(sets_list):
+        result = []
+        for s in sets_list:
+            if not any(s != existing_set and s.issuperset(existing_set) for existing_set in sets_list):
+                result.append(s)
+        return result
+
+    def simplify_dnf(s):
+        if s.strip() == "":
+            return ""
+        ss = s.split("|")
+        ss = [s.strip() for s in ss]
+        ss = [s[1:-1] if s[0] == "(" else s for s in ss]
+        ss = [s.split("&") for s in ss]
+        ss = [[sss.strip() for sss in s] for s in ss]
+        ss = [set(s) for s in ss]
+
+        filtered_sets = DNF_Regression_solver.remove_supersets(ss)
+        filtered_lists = [sorted(list(f)) for f in sorted(filtered_sets)]
+        filtered_lists = [" & ".join(f) for f in sorted(filtered_lists)]
+        str = "(" + ") | (".join(filtered_lists) + ")"
+        return str
+
 
     def try_convert_to_numeric(text):
         for func in (int, float, complex):
@@ -382,6 +406,9 @@ class DNF_Regression_solver:
                     true_test_pass = True
                     for i in range(len(p_list)):
                         match_and_break = False
+                        print(p_list[i], "p_list")
+                        if (3,4) == p_list[i]:
+                            print("found p_list")
                         b = DNF_Regression_solver.convTuple2bin(p_list[i], numvars)
                         for p in raw_perf2_n:
                             if p == b & p:
@@ -406,6 +433,7 @@ class DNF_Regression_solver:
         for dn in raw_perf_n:
             dnf_perf_n.append(sorted(list(set([inp[0][ii] for ii in dn]))))
 
+#         print("dnf_perf_n", dnf_perf_n)
         
         print("size of false dnf in negative form " + str(len(dnf_perf_n)))
         if len(dnf_perf_n) > 10000:
@@ -433,19 +461,23 @@ class DNF_Regression_solver:
         else:
             dnf_common = set_dnf_true
             
-        print("dnf_common", dnf_common)
-        print("set_dnf_true", set_dnf_true)
-        print("set_dnf_false", set_dnf_false)
-        print("set_dnf_true & set_dnf_false", set_dnf_true & set_dnf_false)
+#         print("dnf_common", dnf_common)
+#         print("set_dnf_true", set_dnf_true)
+#         print("set_dnf_false", set_dnf_false)
+#         print("set_dnf_true & set_dnf_false", set_dnf_true & set_dnf_false)
         
         self.expression = " | ".join(dnf_common)
         self.expression_common = " | ".join(dnf_common)
+        self.expression_common = DNF_Regression_solver.simplify_dnf(self.expression_common)
         self.expression_true = " | ".join(set_dnf_true)
+        self.expression_true = DNF_Regression_solver.simplify_dnf(self.expression_true)
         if self.expression == "":
             self.expression = self.expression_true
         self.expression_false = " | ".join(set_dnf_false)
+        self.expression_false = DNF_Regression_solver.simplify_dnf(self.expression_false)
         self.expression_union = " | ".join(set_dnf_true | set_dnf_false)
-    
+        self.expression_union = DNF_Regression_solver.simplify_dnf(self.expression_union)
+        
         if check_false:
             print("")
             print("DNF COMMON - " + str(len(dnf_common)))
@@ -482,7 +514,6 @@ class DNF_Regression_solver:
         print("")
         
         return inp
-
 
 
 
