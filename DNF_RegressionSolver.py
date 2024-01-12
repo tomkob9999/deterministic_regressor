@@ -1,7 +1,7 @@
 # Name: DNF_Regression_solver
 # Author: tomio kobayashi
-# Version: 2.4.2
-# Date: 2024/01/12
+# Version: 2.4.3
+# Date: 2024/01/13
 
 import itertools
 from sympy.logic import boolalg
@@ -19,6 +19,8 @@ class DNF_Regression_solver:
     def __init__(self):
         self.expression_true = ""
         self.expression_false = ""
+        self.true_confidence = {}
+        self.false_confidence = {}
         
 #     def cnf_to_dnf(cnf):
 #         dnf_clauses = []
@@ -113,7 +115,7 @@ class DNF_Regression_solver:
         return eval(______s____)
             
         
-    def solve(self, inp_p, check_negative=True, use_expression="true"):
+    def solve(self, inp_p, check_negative=True, use_expression="true", confidence_thresh=0):
         inp = [[DNF_Regression_solver.try_convert_to_numeric(inp_p[i][j]) for j in range(len(inp_p[i]))] for i in range(len(inp_p))]
         
         numvars = len(inp[0])
@@ -137,33 +139,68 @@ class DNF_Regression_solver:
         
         res = list(range(len(inp_list)))
         expr = ""
+        
+        true_exp = self.expression_true
+        false_exp = self.expression_false
 
+#         print("true_exp before", true_exp)
+#         print("false_exp before", false_exp)
+        if confidence_thresh > 0:
+            true_list = []
+            for s in true_exp.split("|"):
+                s = s.strip()
+#                 print("s", s)
+                if s in self.true_confidence:
+#                     print("true_confidence[s]", self.true_confidence[s])
+#                     print("confidence_level_thresh", confidence_thresh)
+                    if self.true_confidence[s] >= confidence_thresh:
+                        true_list.append(s)
+                else:
+                    true_list.append(s)
+            true_exp = " | ".join(true_list)
+            
+            false_list = []
+            for s in false_exp.split("&"):
+                s = s.strip()
+#                 print("s", s)
+                if s in self.false_confidence:
+#                     print("self.false_confidence[s]", self.false_confidence[s])
+#                     print("confidence_level_thresh", confidence_thresh)
+                    if self.false_confidence[s] >= confidence_thresh:
+                        false_list.append(s)
+                else:
+                    false_list.append(s)
+            false_exp = " & ".join(false_list)
+            
+#         print("true_exp after", true_exp)
+#         print("false_exp after", false_exp)
+        
         if use_expression == "true":
-            if self.expression_true == "":
+            if true_exp == "":
                 print("The true expression is not available")
                 return []
-            expr = self.expression_true
+            expr = true_exp
         elif use_expression == "false":
-            if self.expression_false == "":
+            if false_exp == "":
                 print("The false expression is not available")
                 return []
-            expr = self.expression_false
+            expr = false_exp
         elif use_expression == "common":
-            if self.expression_true == "":
+            if true_exp == "":
                 print("The true expression is not available")
                 return []
-            if self.expression_false == "":
+            if false_exp == "":
                 print("The false expression is not available")
                 return []
-            expr = "(" + self.expression_true + ") & (" + self.expression_false + ")"
+            expr = "(" + true_exp + ") & (" + false_exp + ")"
         else: # union case
             if self.expression_true == "":
                 print("The true expression is not available")
                 return []
-            if self.expression_false == "":
+            if false_exp == "":
                 print("The false expression is not available")
                 return []
-            expr = "(" + self.expression_true + ") | (" + self.expression_false + ")"
+            expr = "(" + true_exp + ") | (" + false_exp + ")"
 
 
         print("Solver Expression:")
@@ -319,6 +356,7 @@ class DNF_Regression_solver:
         dnf_perf = list()
         raw_perf = list()
         raw_perf2 = list()
+
         for s in range(max_dnf_len):
             len_dnf = s + 1
             
@@ -351,10 +389,15 @@ class DNF_Regression_solver:
 
                 raw_perf.append([ii for ii in p_list[i]])
                 raw_perf2.append(b)
+
+                self.true_confidence["(" + " & ".join(sorted(list(set([inp[0][ii] for ii in p_list[i]])))) + ")"] = cnt_all if cnt_unmatch == 0 else cnt_all/cnt_unmatch
+        
+#         print("true_confidence", self.true_confidence)
         
         for dn in raw_perf:
             dnf_perf.append(sorted(list(set([inp[0][ii] for ii in dn]))))
-
+                
+        
         print("size of true dnf " + str(len(dnf_perf)))
         
         print("Deriving false expressions...")
@@ -395,6 +438,7 @@ class DNF_Regression_solver:
                             
                         raw_perf_n.append([ii for ii in p_list[i]])
                         raw_perf2_n.append(b)       
+                        self.false_confidence["(" + " | ".join(sorted(list(set([inp[0][ii] for ii in p_list[i]])))) + ")"] = cnt_all if cnt_unmatch == 0 else cnt_all/(cnt_unmatch+1)
 #                 print("raw_perf_n", raw_perf_n)
             else:
                 for s in range(max_dnf_len):
@@ -432,6 +476,9 @@ class DNF_Regression_solver:
                             
                         raw_perf_n.append([ii for ii in p_list[i]])
                         raw_perf2_n.append(b)  
+                        self.false_confidence["(" + " | ".join(sorted(list(set([inp[0][ii] for ii in p_list[i]])))) + ")"] = cnt_all if cnt_unmatch == 0 else cnt_all/(cnt_unmatch+1)
+        
+#         print("self.false_confidence", self.false_confidence)
         
         for dn in raw_perf_n:
             dnf_perf_n.append(sorted(list(set([inp[0][ii] for ii in dn]))))
