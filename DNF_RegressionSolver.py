@@ -1,6 +1,6 @@
 # Name: DNF_Regression_solver
 # Author: tomio kobayashi
-# Version: 2.2.4
+# Version: 2.2.5
 # Date: 2024/01/12
 
 import itertools
@@ -122,9 +122,13 @@ class DNF_Regression_solver:
         result_header = data_list[0][-1]
         result_values = [d[-1] for d in data_list[1:]]
         
-        headers = data_list[0][:-2]
-        values = [d[:-2] for d in data_list[1:]]
+        headers = data_list[0][:-1]
+        values = [d[:-1] for d in data_list[1:]]
 
+#         print("result_header", result_header)
+#         print("result_values", result_values)
+#         print("headers", headers)
+#         print("values", values)
     
         data = pd.DataFrame(values, columns=headers) 
 
@@ -180,16 +184,19 @@ class DNF_Regression_solver:
         else:
             inp = data_list
 
-        print("Discretizing...")
         inp = [[DNF_Regression_solver.try_convert_to_numeric(inp[i][j]) for j in range(len(inp[i]))] for i in range(len(inp))]
+        
+#         print("inp", inp)
+#         print("len(inp[1])", len(inp[1]))
+        print("Discretizing...")
         inp = DNF_Regression_solver.discretize_data(inp, by_four)
-        print("")
-        print("Columns:")
-        print(inp[0])
         print("")
         
         numvars = len(inp[1])-1
 
+#         print("len(inp[1])", len(inp[1]))
+#         print("check_negative", check_negative)
+        
         if check_negative:
             for i in range(numvars):
                 inp[0].insert(i+numvars, "n_" + inp[0][i])
@@ -198,6 +205,10 @@ class DNF_Regression_solver:
                     inp[j].insert(i+numvars, 0 if inp[j][i] == 1 else 1)
             numvars *= 2
 
+        print("Columns:")
+        print(inp[0])
+        print("")
+        
         if max_dnf_len > numvars - 1:
             max_dnf_len = numvars - 1
             
@@ -211,6 +222,7 @@ class DNF_Regression_solver:
             s = ""
             for j in range(len(inp[i]) - 1):
                 s += str(inp[i][j])
+#             print(s)
             truefalse = inp[i][len(inp[i]) - 1]
             dic[int(s, 2)] = truefalse
             if truefalse == '1':
@@ -226,6 +238,7 @@ class DNF_Regression_solver:
                 s += str(inp_oppo[i][j])
             truefalse = inp_oppo[i][len(inp_oppo[i]) - 1]
             dic_opp[int(s, 2)] = truefalse
+
                 
         print("Deriving true expressions...")
         dnf_perf = list()
@@ -236,8 +249,8 @@ class DNF_Regression_solver:
             
             l = [ii for ii in range(numvars)]
             p_list = list(itertools.combinations(l, len_dnf))
+            print(str(len_dnf) + " variable patterns")
             if len(p_list) > 1000000:
-                print(str(len_dnf) + " variable patterns")
                 print("Skipping because " + str(len(p_list)) + " combinations is too many")
                 break
             true_test_pass = True
@@ -255,7 +268,8 @@ class DNF_Regression_solver:
                     continue
                 cnt_all = len([f for f in r])
                 cnt_unmatch = len([f for f in r if f == 0])
-                if cnt_unmatch/cnt_all > error_tolerance:
+#                 if cnt_unmatch/cnt_all > error_tolerance:
+                if cnt_unmatch > 0:
                     continue
 
                 raw_perf.append([ii for ii in p_list[i]])
@@ -276,8 +290,8 @@ class DNF_Regression_solver:
                     len_dnf = s + 1
                     l = [ii for ii in range(numvars)]
                     p_list = list(itertools.combinations(l, len_dnf))
+                    print(str(len_dnf) + " variable patterns")
                     if len(p_list) > 1000000:
-                        print(str(len_dnf) + " variable patterns")
                         print("Skipping because " + str(len(p_list)) + " combinations is too many")
                         break
 
@@ -301,14 +315,15 @@ class DNF_Regression_solver:
 
                         raw_perf_n.append([ii for ii in p_list[i]])
                         raw_perf2_n.append(b)       
+#                 print("raw_perf_n", raw_perf_n)
             else:
                 for s in range(max_dnf_len):
                     len_dnf = s + 1
 
                     l = [ii for ii in range(numvars)]
                     p_list = list(itertools.combinations(l, len_dnf))
+                    print(str(len_dnf) + " variable patterns")
                     if len(p_list) > 1000000:
-                        print(str(len_dnf) + " variable patterns")
                         print("Skipping because " + str(len(p_list)) + " combinations is too many")
                         break
                     true_test_pass = True
@@ -406,7 +421,6 @@ class DNF_Regression_solver:
         print("")
         
         return inp
-
 
 
 
