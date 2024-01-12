@@ -268,8 +268,8 @@ class DNF_Regression_solver:
                     continue
                 cnt_all = len([f for f in r])
                 cnt_unmatch = len([f for f in r if f == 0])
-#                 if cnt_unmatch/cnt_all > error_tolerance:
-                if cnt_unmatch > 0:
+                if cnt_unmatch/cnt_all > error_tolerance:
+#                 if cnt_unmatch > 0:
                     continue
 
                 raw_perf.append([ii for ii in p_list[i]])
@@ -421,6 +421,10 @@ class DNF_Regression_solver:
         print("")
         
         return inp
+
+
+
+
 
 ###### SAMPLE EXECUTION #########
 
