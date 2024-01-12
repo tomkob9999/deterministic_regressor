@@ -422,24 +422,33 @@ class DNF_Regression_solver:
         
         return inp
 
+###### SAMPLE EXECUTION #########
 
+import copy
+from sklearn.metrics import precision_score, recall_score, f1_score
 
-file_path = '/kaggle/input/tomio2/dnf_regression.txt'
+file_path = '/kaggle/input/tomio1/dnf_regression.txt'
 
 reg = DNF_Regression_solver()
-reg.train(file_path, error_tolerance=0.03)
-
-
-with open(file_path, 'r') as f:
-    inp = [line.strip().split('\t') for line in f]
+inp = reg.train(file_path=file_path, error_tolerance=0.03, check_negative=True)
 
 answer = [int(inp[i][-1]) for i in range(1, len(inp), 1)]
-print("answer", answer)
 
-inp = [[inp[i][j] for j in range(len(inp[i])-1)] for i in range(len(inp))]
-
+inp = [row[:-1] for row in inp]
   
 # print(inp)
-res = reg.solve(inp)
-print("res", res)
+res = reg.solve(inp, used_expression="false")
+# res = reg.solve(inp)
+print("Predicted")
+print(res)
+print("Actual")
+print(answer)
+
+precision = precision_score(answer, res)
+recall = recall_score(answer, res)
+f1 = f1_score(answer, res)
+
+print(f"Precision: {precision * 100:.2f}%")
+print(f"Recall: {recall * 100:.2f}%")
+print(f"F1 Score: {f1 * 100:.2f}%")
 
