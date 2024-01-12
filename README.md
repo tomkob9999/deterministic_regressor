@@ -24,7 +24,17 @@ HOW TO RUN:
 
 file_path = '/kaggle/input/tomio5/dnf_regression.txt'
 
-DNF_Regression_solver.solve(file_path)
+reg = Deterministic_Regressor()
+inp = reg.train(file_path=file_path, error_tolerance=0.03, check_negative=True)
+
+answer = [int(inp[i][-1]) for i in range(1, len(inp), 1)]
+inp = [row[:-1] for row in inp]
+
+res = reg.solve(inp, use_expression="false")
+print("Predicted")
+print(res)
+print("Actual")
+print(answer)
 
 The input file is a tab-delimited text file where the fields are conditions indicated by 1 or 0, and the last field (or column) indicates the result as sampled below.  Also, a sample file dnf_regression.txt is in the repository.
 
