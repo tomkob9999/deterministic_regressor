@@ -1,6 +1,6 @@
 # Name: DNF_Regression_solver
 # Author: tomio kobayashi
-# Version: 2.2.8
+# Version: 2.2.9
 # Date: 2024/01/12
 
 import itertools
@@ -206,7 +206,7 @@ class DNF_Regression_solver:
         return sampled_rows
 
     
-    def train(self, file_path=None, data_list=None, max_dnf_len=4, check_false=True, check_negative=False, error_tolerance=0.02, by_four=1):
+    def train(self, file_path=None, data_list=None, max_dnf_len=4, check_false=True, check_negative=False, error_tolerance=0.02, by_four=1, min_match=3):
 
 # file_path: input file in tab-delimited text
 # check_negative: enable to check the negative conditions or not.  This one is very heavy.
@@ -217,7 +217,7 @@ class DNF_Regression_solver:
         # Example usage:
         # file_path = '/kaggle/input/dnf-regression/dnf_regression.txt'
         # file_path = '/kaggle/input/tomio5/dnf_regression.txt'
-
+        
         inp = None
         if file_path is not None:
             with open(file_path, 'r') as f:
@@ -319,6 +319,8 @@ class DNF_Regression_solver:
                 if cnt_unmatch/cnt_all > error_tolerance:
 #                 if cnt_unmatch > 0:
                     continue
+                if cnt_all - cnt_unmatch < min_match:
+                    continue
 
                 raw_perf.append([ii for ii in p_list[i]])
                 raw_perf2.append(b)
@@ -361,6 +363,9 @@ class DNF_Regression_solver:
                         if cnt_unmatch/cnt_all > error_tolerance:
                             continue
 
+                        if cnt_all - cnt_unmatch < min_match:
+                            continue
+                            
                         raw_perf_n.append([ii for ii in p_list[i]])
                         raw_perf2_n.append(b)       
 #                 print("raw_perf_n", raw_perf_n)
@@ -392,6 +397,9 @@ class DNF_Regression_solver:
                         if cnt_unmatch/cnt_all > error_tolerance:
                             continue
 
+                        if cnt_all - cnt_unmatch < min_match:
+                            continue
+                            
                         raw_perf_n.append([ii for ii in p_list[i]])
                         raw_perf2_n.append(b)  
         
