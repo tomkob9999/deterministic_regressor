@@ -1,5 +1,7 @@
 # DNF Regression Solver
 
+This is a prediction ML model based on deterministic approach unlike much of existing models that are stochastics and search for the trend using the minimum sum of euclidean distances, the optimimum coeeficients by gradient descent or minimizining the entropies to divide segments, etc.  This model instead searches for the Boolean expression that underlines true/false decisions.  The existing model cannot overcome the complexity of AND/OR relationships of input variables because the regression models measures the euclidean distances, which is combinations of variables and deicision tree uses most information gain for each decision, but this model can find the most inricate relationships.
+
 This tool generates a DNF expression by regressing the values of input Boolean variables.  Overall, it works by creating DNF separately for true cases and false cases, and then find the common DNF factors.  The run time is exponential due to the parts that the combinations increase factorially as the input variable increases and that it converts fron cnf to dnf.
 
 DNF Common should be considered reliable.  DNF TRUE and DNF FALSE are good candidates.  DNF TRUE is susceptible to false positives and DNF FALS are susceptible to false negatives.  So, DNS Common is ideal, but as the train data can may not be sufficient as always the case, they may be used instead.  DNS UNION that contains union of both DNS TRUE and DNS FALSE is available as well.
