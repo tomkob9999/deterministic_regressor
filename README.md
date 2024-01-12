@@ -10,7 +10,7 @@ It generates 4 logic expressions by train.  The DNF core is used as default for 
 - DNF FALSE: The logic expression is derived for false judgements.  This is less aggressive to judge as true than TRUE.
 - DNF UNION: The combination of TRUE and FALSE.  This is most aggressive to judge as true.
 
-Here is the aggressiveness to judge as true.
+Here is the aggressiveness to judge as true.  The less aggress, the higher confidence level the DNF CLAUSES are, yet they are less eager to mark as true.
 
 DNF COMMON < DNF FALSE < DNF TRUE < DNF UNION
 
