@@ -1,6 +1,6 @@
 # Name: DNF_Regression_solver
 # Author: tomio kobayashi
-# Version: 2.2.7
+# Version: 2.2.8
 # Date: 2024/01/12
 
 import itertools
@@ -226,9 +226,9 @@ class DNF_Regression_solver:
             inp = data_list
 
 # ############## TO BE REMOVED ############## 
-        print("num recs before", len(inp))
-        inp = DNF_Regression_solver.reduce_rows_except_first(inp, 20)
-        print("num recs after", len(inp))
+#         print("num recs before", len(inp))
+#         inp = DNF_Regression_solver.reduce_rows_except_first(inp, 30)
+#         print("num recs after", len(inp))
 # ############## TO BE REMOVED ############## 
 
 
@@ -419,30 +419,33 @@ class DNF_Regression_solver:
 #             set_dnf_false = set([word.strip() for word in str(boolalg.to_dnf(cnf, simplify=True, force=True)).split("|")])
             print("Converting from CNF to DNF for false expressions..")
             my_dnf = DNF_Regression_solver.cnf_to_dnf(cnf_list)
-            print("Simplifying CNF for false expressions..")
             set_dnf_false = set(["(" + " & ".join(a) + ")" for a in [[a for a in aa] for aa in my_dnf]])
             dnf_common = set_dnf_true & set_dnf_false
 
         else:
             dnf_common = set_dnf_true
+            
+        print("dnf_common", dnf_common)
+        print("set_dnf_true", set_dnf_true)
+        print("set_dnf_false", set_dnf_false)
+        print("set_dnf_true & set_dnf_false", set_dnf_true & set_dnf_false)
         
         self.expression = " | ".join(dnf_common)
-        
         self.expression_common = " | ".join(dnf_common)
         self.expression_true = " | ".join(set_dnf_true)
         if self.expression == "":
             self.expression = self.expression_true
         self.expression_false = " | ".join(set_dnf_false)
         self.expression_union = " | ".join(set_dnf_true | set_dnf_false)
-        
-            
+    
         if check_false:
             print("")
             print("DNF COMMON - " + str(len(dnf_common)))
             print("--------------------------------")
 
             if len(dnf_common) > 0:
-                print(" | ".join(dnf_common))
+#                 print(" | ".join(dnf_common))
+                print(self.expression_common)
             
             
         print("")
@@ -450,14 +453,16 @@ class DNF_Regression_solver:
         print("--------------------------------")
 
         if len(set_dnf_true) > 0:
-            print(" | ".join(set_dnf_true))
+#             print(" | ".join(set_dnf_true))
+            print(self.expression_true)
 
         if check_false:
             print("")
             print("DNF FALSE - " + str(len(set_dnf_false)))
             print("--------------------------------")
             if len(set_dnf_false) > 0:
-                print(" | ".join(set_dnf_false))
+#                 print(" | ".join(set_dnf_false))
+                print(self.expression_false)
             
         perm_vars = list(set([xx for x in dnf_perf for xx in x] + [xx for x in dnf_perf_n for xx in x]))
         not_picked = [inp[0][ii] for ii in range(len(inp[0])-1) if inp[0][ii] not in perm_vars]
@@ -469,7 +474,6 @@ class DNF_Regression_solver:
         print("")
         
         return inp
-
 
 
 
