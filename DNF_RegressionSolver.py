@@ -118,6 +118,8 @@ class DNF_Regression_solver:
     def solve(self, inp_p, check_negative=True, use_expression="true", confidence_thresh=0):
         inp = [[DNF_Regression_solver.try_convert_to_numeric(inp_p[i][j]) for j in range(len(inp_p[i]))] for i in range(len(inp_p))]
         
+        print("Input Records:", len(inp)-1)
+        
         numvars = len(inp[0])
 
         if check_negative:
@@ -291,11 +293,12 @@ class DNF_Regression_solver:
 
 # ############## TO BE REMOVED ############## 
 #         print("num recs before", len(inp))
-#         inp = DNF_Regression_solver.reduce_rows_except_first(inp, 35)
+#         inp = DNF_Regression_solver.reduce_rows_except_first(inp, 30)
 #         print("num recs after", len(inp))
 # ############## TO BE REMOVED ############## 
 
-
+        print("Train Records:", len(inp)-1)
+    
         inp = [[DNF_Regression_solver.try_convert_to_numeric(inp[i][j]) for j in range(len(inp[i]))] for i in range(len(inp))]
         
 #         print("inp", inp)
@@ -543,6 +546,8 @@ class DNF_Regression_solver:
         print("")
         
         return inp
+
+
 
 
 
