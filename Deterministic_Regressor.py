@@ -1,6 +1,6 @@
-# Name: DNF_Regression_solver
+# Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 2.4.4
+# Version: 2.5.0
 # Date: 2024/01/13
 
 import itertools
@@ -12,7 +12,7 @@ import pandas as pd
 import random
 from sympy import simplify
 
-class DNF_Regression_solver:
+class Deterministic_Regressor:
 # This version has no good matches
 # Instead, all true matches are first added, and some are removed when 
 # false unmatch exists and there is no corresponding other rule
@@ -60,7 +60,7 @@ class DNF_Regression_solver:
 #         dnfl = [list(x) for x in itertools.product(*dnf)]
 # #         dnfl = [["".join(dd) for dd in d] for d in dnfl]
 #         dnfl = [set(d) for d in dnfl]
-#         filtered_sets = DNF_Regression_solver.remove_supersets(dnfl)
+#         filtered_sets = Deterministic_Regressor.remove_supersets(dnfl)
 #         filtered_lists = [sorted(list(f)) for f in sorted(filtered_sets)]
 # #         filtered_lists = [" & ".join(f) for f in sorted(filtered_lists)]
 # #         str = "(" + ") | (".join(filtered_lists) + ")"
@@ -86,7 +86,7 @@ class DNF_Regression_solver:
         ss = [set(s) for s in ss]
 
 #         print("ss", ss)
-        filtered_sets = DNF_Regression_solver.remove_supersets(ss)
+        filtered_sets = Deterministic_Regressor.remove_supersets(ss)
         filtered_lists = [sorted(list(f)) for f in sorted(filtered_sets)]
         filtered_lists = [(" " + tok2 + " ").join(f) for f in sorted(filtered_lists)]
         str = "(" + (") " + tok1 + " (").join(filtered_lists) + ")"
@@ -116,7 +116,7 @@ class DNF_Regression_solver:
             
         
     def solve(self, inp_p, check_negative=True, use_expression="union", confidence_thresh=3):
-        inp = [[DNF_Regression_solver.try_convert_to_numeric(inp_p[i][j]) for j in range(len(inp_p[i]))] for i in range(len(inp_p))]
+        inp = [[Deterministic_Regressor.try_convert_to_numeric(inp_p[i][j]) for j in range(len(inp_p[i]))] for i in range(len(inp_p))]
         
         print("Input Records:", len(inp)-1)
         
@@ -209,7 +209,7 @@ class DNF_Regression_solver:
         print(expr)
         
         for i in range(len(inp_list)):
-            res[i] = DNF_Regression_solver.myeval(inp_list[i], tokens, expr)
+            res[i] = Deterministic_Regressor.myeval(inp_list[i], tokens, expr)
         return res
 
     def generate_segment_ranks(df, num_segments, name):
@@ -236,7 +236,7 @@ class DNF_Regression_solver:
         for c in cols:
             countNonBool = len(data[c]) - (data[c] == 0).sum() - (data[c] == 1).sum()
             if countNonBool > 0 and pd.api.types.is_numeric_dtype(data[c]):
-                result_df = DNF_Regression_solver.generate_segment_ranks(data, by_four*4, c)
+                result_df = Deterministic_Regressor.generate_segment_ranks(data, by_four*4, c)
                 one_hot_df = pd.get_dummies(result_df[c + '_rank'], prefix=c)
                 one_hot_df = one_hot_df.astype(int)
                 data = pd.concat([result_df, one_hot_df], axis=1)
@@ -293,18 +293,18 @@ class DNF_Regression_solver:
 
 # # ############## TO BE REMOVED ############## 
 #         print("num recs before", len(inp))
-#         inp = DNF_Regression_solver.reduce_rows_except_first(inp, 40)
+#         inp = Deterministic_Regressor.reduce_rows_except_first(inp, 40)
 #         print("num recs after", len(inp))
 # # ############## TO BE REMOVED ############## 
 
         print("Train Records:", len(inp)-1)
     
-        inp = [[DNF_Regression_solver.try_convert_to_numeric(inp[i][j]) for j in range(len(inp[i]))] for i in range(len(inp))]
+        inp = [[Deterministic_Regressor.try_convert_to_numeric(inp[i][j]) for j in range(len(inp[i]))] for i in range(len(inp))]
         
 #         print("inp", inp)
 #         print("len(inp[1])", len(inp[1]))
         print("Discretizing...")
-        inp = DNF_Regression_solver.discretize_data(inp, by_four)
+        inp = Deterministic_Regressor.discretize_data(inp, by_four)
         print("")
         
         numvars = len(inp[1])-1
@@ -372,7 +372,7 @@ class DNF_Regression_solver:
             true_test_pass = True
             for i in range(len(p_list)):
                 match_and_break = False
-                b = DNF_Regression_solver.convTuple2bin(p_list[i], numvars)
+                b = Deterministic_Regressor.convTuple2bin(p_list[i], numvars)
                 for p in raw_perf2:
                     if p == b & p:
                         match_and_break = True
@@ -421,7 +421,7 @@ class DNF_Regression_solver:
                     true_test_pass = True
                     for i in range(len(p_list)):
                         match_and_break = False
-                        b = DNF_Regression_solver.convTuple2bin(p_list[i], numvars)
+                        b = Deterministic_Regressor.convTuple2bin(p_list[i], numvars)
                         for p in raw_perf2_n:
                             if p == b & p:
                                 match_and_break = True
@@ -459,7 +459,7 @@ class DNF_Regression_solver:
 #                         print(p_list[i], "p_list")
 #                         if (3,4) == p_list[i]:
 #                             print("found p_list")
-                        b = DNF_Regression_solver.convTuple2bin(p_list[i], numvars)
+                        b = Deterministic_Regressor.convTuple2bin(p_list[i], numvars)
                         for p in raw_perf2_n:
                             if p == b & p:
                                 match_and_break = True
@@ -515,8 +515,8 @@ class DNF_Regression_solver:
                 set_cnf_false = [[a for a in aa] for aa in dnf_perf_n]
 
         self.expression_true = " | ".join(set_dnf_true)
-        self.expression_true = DNF_Regression_solver.simplify_dnf(self.expression_true)
-        self.expression_false = DNF_Regression_solver.simplify_dnf(cnf, use_cnf=True)
+        self.expression_true = Deterministic_Regressor.simplify_dnf(self.expression_true)
+        self.expression_false = Deterministic_Regressor.simplify_dnf(cnf, use_cnf=True)
 
             
             
@@ -558,7 +558,7 @@ from sklearn.metrics import precision_score, recall_score, f1_score
 
 file_path = '/kaggle/input/tomio1/dnf_regression.txt'
 
-reg = DNF_Regression_solver()
+reg = Deterministic_Regressor()
 inp = reg.train(file_path=file_path, error_tolerance=0.03, check_negative=True)
 
 answer = [int(inp[i][-1]) for i in range(1, len(inp), 1)]
