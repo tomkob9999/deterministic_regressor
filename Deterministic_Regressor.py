@@ -1,6 +1,6 @@
 # Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 2.5.7
+# Version: 2.5.8
 # Date: 2024/01/13
 
 import itertools
@@ -24,6 +24,8 @@ class Deterministic_Regressor:
         
         self.tokens = []
         self.dic_segments = {}
+        
+        self.last_solve_expression = ""
         
 #     def cnf_to_dnf(cnf):
 #         dnf_clauses = []
@@ -149,9 +151,19 @@ class Deterministic_Regressor:
         return eval(______s____)
             
         
-    def solve(self, inp_p, check_negative=True, use_expression="union", confidence_thresh=3):
+    def solve(self, inp_p, check_negative=True, use_expression="union", confidence_thresh=3, power_level=None):
         inp = [[Deterministic_Regressor.try_convert_to_numeric(inp_p[i][j]) for j in range(len(inp_p[i]))] for i in range(len(inp_p))]
         
+        if power_level is not None:
+            max_freq = max(max([v for k, v in self.true_confidence.items()]), max([v for k, v in self.false_confidence.items()]))
+#             print(self.dic_segments)
+#             print("max_freq", max_freq)
+            if max_freq - power_level < 0:
+                confidence_thresh = 0
+            else:
+                confidence_thresh = max_freq - power_level
+#         print("confidence_thresh", confidence_thresh)
+                
         print("Input Records:", len(inp)-1)
         
         numvars = len(inp[0])
@@ -258,6 +270,8 @@ class Deterministic_Regressor:
 #         print(expr)
         print(self.replaceSegName(expr))
         
+        self.last_solve_expression = expr
+        
         for i in range(len(inp_list)):
             res[i] = Deterministic_Regressor.myeval(inp_list[i], tokens, expr)
         return res
@@ -265,7 +279,7 @@ class Deterministic_Regressor:
     def replaceSegName(self, str):
         s = str
         for t in self.tokens:
-            if t in s:
+            if t in s and t in self.dic_segments:
                 s = s.replace(t, self.dic_segments[t])
         return s
             
@@ -645,6 +659,7 @@ class Deterministic_Regressor:
         
 #         return inp
         return imp_before_row_reduction
+
 
 
 
