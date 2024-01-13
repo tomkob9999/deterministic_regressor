@@ -10,11 +10,11 @@ It generates 2 logic expressions by train.
 
 It has 4 options for solve.
 - UNION: union of TRUE DNF and FALSE CNF
+- COMMON: intersection of TRUE DNF and FALSE CNF
 - TRUE: TRUE DNF only
 - FALSE: FALSE CNF only
-- COMMON: intersection of TRUE DNF and FALSE CNF
 
-The UNION is the default option.  With the confidence threshold (defaulted to 3) properly set, it combines the best of both TRUE DNF and FALSE CNF.  The confidence threshold can be set to lower or higher based on the input data during train() (not solve()).  It can be as low as 0.  It is possible to hyperparameterize by starting low and go higher until the accuracy declines to find the minimum set of logic clauses, which avoids overfitting and better performance.  Please note train() uses min_match as the threshold already, so there is no use in setting confidence_thresh in solve() lower than min_match in train().
+The UNION is the default option.  With the confidence threshold (defaulted to 3) properly set, it tends to combine the best of both TRUE DNF and FALSE CNF.  The confidence threshold can be set to low or high based on the size of input data during train() (not solve()).  It can be as low as 0.  It is possible to hyper-parameterize by starting low and go higher until the accuracy declines as it tends to find the minimum, but still effective, set of logic clauses, which avoids overfitting and leads to better performance.  Please note train() uses min_match as the threshold already(defaulted to 3), so there is no use in setting confidence_thresh in solve() lower than min_match in train().
 
 
 TO-DO-FUTURE:
