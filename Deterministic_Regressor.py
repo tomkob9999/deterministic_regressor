@@ -1,7 +1,7 @@
 # Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 2.5.8
-# Date: 2024/01/13
+# Version: 2.5.9
+# Date: 2024/01/14
 
 import itertools
 from sympy.logic import boolalg
@@ -87,10 +87,10 @@ class Deterministic_Regressor:
             dnf.append(dnf_clause)
         dnfl = [list(x) for x in itertools.product(*dnf)]
         dnfl = [set(d) for d in dnfl]
-        filtered_sets = DNF_Regression_solver.remove_supersets(dnfl)
-        filtered_lists = [sorted(list(f)) for f in sorted(filtered_sets)]
-        filtered_lists = [" & ".join(f) for f in sorted(filtered_lists)]
-        str = "(" + ") | (".join(filtered_lists) + ")"
+        filtered_sets = Deterministic_Regressor.remove_supersets(dnfl)
+        filtered_lists = [sorted(list(f)) for f in filtered_sets]
+        filtered_lists = set([" & ".join(f) for f in filtered_lists])
+        str = "(" + ") | (".join(sorted(filtered_lists)) + ")"
         return str
     
     
@@ -100,7 +100,6 @@ class Deterministic_Regressor:
         if use_cnf:
             tok1 = "&"
             tok2 = "|"
-#         print("s", s)
         if s.strip() == "":
             return ""
         ss = s.split(tok1)
@@ -110,7 +109,6 @@ class Deterministic_Regressor:
         ss = [[sss.strip() for sss in s] for s in ss]
         ss = [set(s) for s in ss]
 
-#         print("ss", ss)
         filtered_sets = Deterministic_Regressor.remove_supersets(ss)
         filtered_lists = [sorted(list(f)) for f in sorted(filtered_sets)]
         filtered_lists = [(" " + tok2 + " ").join(f) for f in sorted(filtered_lists)]
@@ -129,13 +127,7 @@ class Deterministic_Regressor:
                     return int(text)
                 except ValueError:
                     pass
-        return text  # Return the original string if conversion fails
-#             for func in (int, float, complex):
-#                 try:
-#                     return func(text)
-#                 except ValueError:
-#                     pass
-#         return text  # Return the original string if conversion fails
+        return text
 
     def convTuple2bin(t, width):
         i = 1
@@ -156,13 +148,12 @@ class Deterministic_Regressor:
         
         if power_level is not None:
             max_freq = max(max([v for k, v in self.true_confidence.items()]), max([v for k, v in self.false_confidence.items()]))
-#             print(self.dic_segments)
-#             print("max_freq", max_freq)
+            
             if max_freq - power_level < 0:
                 confidence_thresh = 0
             else:
                 confidence_thresh = max_freq - power_level
-#         print("confidence_thresh", confidence_thresh)
+        print("confidence_thresh:", confidence_thresh)
                 
         print("Input Records:", len(inp)-1)
         
@@ -177,13 +168,7 @@ class Deterministic_Regressor:
             numvars *= 2
 
         tokens = inp[0]
-#         print("tokens", tokens)
         inp_list = [row for row in inp[1:]]
-    
-#         inp_list_oppo = [[0 if m == 1 else 1 for m in inp_list[i]] for i in range(len(inp_list))]
-        
-#         print("inp_list", inp_list)
-#         print("inp_list_oppo", inp_list_oppo)
         
         res = list(range(len(inp_list)))
         expr = ""
@@ -192,16 +177,11 @@ class Deterministic_Regressor:
         false_exp = self.expression_false
         active_true_clauses = 0
         active_false_clauses = 0
-#         print("true_exp before", true_exp)
-#         print("false_exp before", false_exp)
         if confidence_thresh > 0:
             true_list = []
             for s in true_exp.split("|"):
                 s = s.strip()
-#                 print("s", s)
                 if s in self.true_confidence:
-#                     print("true_confidence[s]", self.true_confidence[s])
-#                     print("confidence_level_thresh", confidence_thresh)
                     if self.true_confidence[s] >= confidence_thresh:
                         true_list.append(s)
                         active_true_clauses += 1
@@ -213,10 +193,7 @@ class Deterministic_Regressor:
             false_list = []
             for s in false_exp.split("&"):
                 s = s.strip()
-#                 print("s", s)
                 if s in self.false_confidence:
-#                     print("self.false_confidence[s]", self.false_confidence[s])
-#                     print("confidence_level_thresh", confidence_thresh)
                     if self.false_confidence[s] >= confidence_thresh:
                         false_list.append(s)
                         active_false_clauses += 1
@@ -228,10 +205,6 @@ class Deterministic_Regressor:
             active_true_clauses = len(true_exp.split("|"))
             active_false_clauses = len(false_exp.split("&"))
             
-            
-#         print("true_exp after", true_exp)
-#         print("false_exp after", false_exp)
-        
         if use_expression == "true":
             if true_exp == "":
                 print("The true expression is not available")
@@ -267,7 +240,6 @@ class Deterministic_Regressor:
 
 
         print("Solver Expression:")
-#         print(expr)
         print(self.replaceSegName(expr))
         
         self.last_solve_expression = expr
@@ -285,8 +257,7 @@ class Deterministic_Regressor:
             
             
     def generate_segment_ranks(self, df, num_segments, name, silent=False):
-    #     df = pd.DataFrame({name: data})
-#         print("df", df)
+
         df[name + '_rank'] = pd.cut(df[name], bins=num_segments, labels=False)
         df[name + '_label'] = pd.cut(df[name], bins=num_segments, labels=[f'{name} {i+1}' for i in range(num_segments)])
         min_max_per_group = df.groupby(name + '_rank')[name].agg(['max'])
@@ -295,7 +266,6 @@ class Deterministic_Regressor:
         prev_max_str = ""
         ranks = sorted(df[name + '_rank'].unique().tolist())
         for i in range(len(max_list)):
-#         for i in sorted(df[name + '_rank'].unique().tolist()):
             if i == 0:
                 self.dic_segments[name + "_" + str(ranks[i])] = name + " <= " + str(max_list[i][0])
                 prev_max_str = str(max_list[i][0])
@@ -325,20 +295,17 @@ class Deterministic_Regressor:
         for c in cols:
             countNonBool = len(data[c]) - (data[c] == 0).sum() - (data[c] == 1).sum()
             if countNonBool > 0 and pd.api.types.is_numeric_dtype(data[c]):
-#                 result_df = Deterministic_Regressor.generate_segment_ranks(data, by_four*4, c, silent=silent)
                 result_df = self.generate_segment_ranks(data, by_four*4, c, silent=silent)
                 one_hot_df = pd.get_dummies(result_df[c + '_rank'], prefix=c)
                 one_hot_df = one_hot_df.astype(int)
                 data = pd.concat([result_df, one_hot_df], axis=1)
         cols = [c for c in data.columns]
-#         print("cols", cols)
         new_cols = []
         for c in cols:
             countNonBool = len(data[c]) - (data[c] == 0).sum() - (data[c] == 1).sum()
             if countNonBool == 0 and pd.api.types.is_numeric_dtype(data[c]):
                 new_cols.append(c)
         
-#         print("cols", cols)
         data = data.filter(items=new_cols)
 
         data_list = [data.columns.tolist()] + data.values.tolist()
@@ -390,8 +357,6 @@ class Deterministic_Regressor:
         print("Discretizing...")
         inp = self.discretize_data(inp, by_four)
         print("")
-
-#         print("self.dic_segments", self.dic_segments)
         
         imp_before_row_reduction = copy.deepcopy(inp)
 # # # # ############## COMMENT OUT UNLESS TESTING ############## 
@@ -403,9 +368,6 @@ class Deterministic_Regressor:
 
         
         numvars = len(inp[1])-1
-
-#         print("len(inp[1])", len(inp[1]))
-#         print("check_negative", check_negative)
         
         if check_negative:
             for i in range(numvars):
@@ -434,7 +396,6 @@ class Deterministic_Regressor:
             s = ""
             for j in range(len(inp[i]) - 1):
                 s += str(inp[i][j])
-#             print(s)
             truefalse = inp[i][len(inp[i]) - 1]
             dic[int(s, 2)] = truefalse
             if truefalse == '1':
@@ -446,13 +407,12 @@ class Deterministic_Regressor:
         for i in range(1, len(inp_oppo), 1):
             s = ""
             for j in range(len(inp_oppo[i]) - 1):
-#                 s += inp[i][j]
                 s += str(inp_oppo[i][j])
             truefalse = inp_oppo[i][len(inp_oppo[i]) - 1]
             dic_opp[int(s, 2)] = truefalse
 
                 
-        MAX_REPS = 2000000
+        MAX_REPS = 1500000
         
         print("Deriving true expressions...")
         dnf_perf = list()
@@ -484,7 +444,6 @@ class Deterministic_Regressor:
                 cnt_all = len([f for f in r])
                 cnt_unmatch = len([f for f in r if f == 0])
                 if cnt_unmatch/cnt_all > error_tolerance:
-#                 if cnt_unmatch > 0:
                     continue
                 if cnt_all - cnt_unmatch < min_match:
                     continue
@@ -492,10 +451,8 @@ class Deterministic_Regressor:
                 raw_perf.append([ii for ii in p_list[i]])
                 raw_perf2.append(b)
 
-#                 self.true_confidence["(" + " & ".join(sorted(list(set([inp[0][ii] for ii in p_list[i]])))) + ")"] = cnt_all if cnt_unmatch == 0 else cnt_all/cnt_unmatch(cnt_unmatch+1)
                 self.true_confidence["(" + " & ".join(sorted(list(set([inp[0][ii] for ii in p_list[i]])))) + ")"] = cnt_all - cnt_unmatch
         
-#         print("true_confidence", self.true_confidence)
         
         for dn in raw_perf:
             dnf_perf.append(sorted(list(set([inp[0][ii] for ii in dn]))))
@@ -541,9 +498,7 @@ class Deterministic_Regressor:
                             
                         raw_perf_n.append([ii for ii in p_list[i]])
                         raw_perf2_n.append(b)       
-#                         self.false_confidence["(" + " | ".join(sorted(list(set([inp[0][ii] for ii in p_list[i]])))) + ")"] = cnt_all if cnt_unmatch == 0 else cnt_all/(cnt_unmatch+1)
                         self.false_confidence["(" + " | ".join(sorted(list(set([inp[0][ii] for ii in p_list[i]])))) + ")"] = cnt_all - cnt_unmatch
-#                 print("raw_perf_n", raw_perf_n)
             else:
                 for s in range(max_dnf_len):
                     len_dnf = s + 1
@@ -557,9 +512,6 @@ class Deterministic_Regressor:
                     true_test_pass = True
                     for i in range(len(p_list)):
                         match_and_break = False
-#                         print(p_list[i], "p_list")
-#                         if (3,4) == p_list[i]:
-#                             print("found p_list")
                         b = Deterministic_Regressor.convTuple2bin(p_list[i], numvars)
                         for p in raw_perf2_n:
                             if p == b & p:
@@ -580,20 +532,12 @@ class Deterministic_Regressor:
                             
                         raw_perf_n.append([ii for ii in p_list[i]])
                         raw_perf2_n.append(b)  
-#                         self.false_confidence["(" + " | ".join(sorted(list(set([inp[0][ii] for ii in p_list[i]])))) + ")"] = cnt_all if cnt_unmatch == 0 else cnt_all/(cnt_unmatch+1)
                         self.false_confidence["(" + " | ".join(sorted(list(set([inp[0][ii] for ii in p_list[i]])))) + ")"] = cnt_all - cnt_unmatch
-        
-#         print("self.false_confidence", self.false_confidence)
         
         for dn in raw_perf_n:
             dnf_perf_n.append(sorted(list(set([inp[0][ii] for ii in dn]))))
-
-#         print("dnf_perf_n", dnf_perf_n)
-        
+            
         print("size of false cnf " + str(len(dnf_perf_n)))
-#         if len(dnf_perf_n) > 10000:
-#             print("cutting to only 10000 of false dnf in negative form randomly as they are too many")
-#             dnf_perf_n = random.sample(dnf_perf_n, 10000)
         
         set_dnf_true = set(["(" + s + ")" for s in [" & ".join(a) for a in dnf_perf]])
         dnf_common = None
@@ -606,14 +550,12 @@ class Deterministic_Regressor:
                     cnf = "(" + ") & (".join([" | ".join(a) for a in [[a[2:] if a[0:2] == "n_" else "n_" + a for a in aa] for aa in dnf_perf_n]]) + ")"
                 else:
                     cnf = ""
-#                 cnf_list = [(a[2:] if a[0:2] == "n_" else "n_" + a for a in aa) for aa in dnf_perf_n]
                 set_cnf_false = [[a[2:] if a[0:2] == "n_" else "n_" + a for a in aa] for aa in dnf_perf_n]
             else:
                 if len(dnf_perf_n) > 0:
                     cnf = "(" + ") & (".join([" | ".join(a) for a in [[a for a in aa] for aa in dnf_perf_n]]) + ")"
                 else:
                     cnf = ""
-#                 cnf_list = [(a for a in aa) for aa in dnf_perf_n]
                 set_cnf_false = [[a for a in aa] for aa in dnf_perf_n]
 
         self.expression_true = " | ".join(set_dnf_true)
@@ -627,15 +569,7 @@ class Deterministic_Regressor:
         print("--------------------------------")
 
         if len(set_dnf_true) > 0:
-#             print(self.expression_true)
             print(self.replaceSegName(self.expression_true))
-    
-#             s = self.expression_true
-#             for t in tokens:
-#                 if t in s:
-#                     print("t", t)
-#                     s = s.replace(t, self.dic_segments[t])
-#             print(s)
             
 
         if check_false:
@@ -643,12 +577,9 @@ class Deterministic_Regressor:
             print("CNF FALSE - " + str(len(set_cnf_false)))
             print("--------------------------------")
             if len(set_cnf_false) > 0:
-#                 print(" | ".join(set_dnf_false))
-#                 print(self.expression_false)
                 print(self.replaceSegName(self.expression_false))
             
         perm_vars = list(set([xx for x in dnf_perf for xx in x] + [xx for x in dnf_perf_n for xx in x]))
-#         not_picked = [inp[0][ii] for ii in range(len(inp[0])-1) if inp[0][ii] not in perm_vars]
         not_picked = [self.replaceSegName(inp[0][ii]) for ii in range(len(inp[0])-1) if inp[0][ii] not in perm_vars]
 
         print("")
@@ -660,6 +591,81 @@ class Deterministic_Regressor:
 #         return inp
         return imp_before_row_reduction
 
+
+    def optimize_params(self, test_data, answer, elements_count_penalty=1.0, jump=16):
+
+        inp = test_data
+        
+        best_ee_sofar = 0
+        ct_now = 0
+
+        ct_opt = 0
+        expr_opt = ""
+        win_option_sofar = ""
+        opt_precision_sofar = 0
+        opt_recall_sofar = 0
+        opt_f1_sofar = 0
+
+        for i in range(100):
+            print("")
+            print("")
+            print("##### Power Level", ct_now, "######")
+            best_ee = 0
+            win_option = ""
+            win_expr = ""
+            opt_precision = 0
+            opt_recall = 0
+            opt_f1 = 0
+            for o in ["union", "common", "true", "false"]:
+                print("")
+                print("******* " + o + " ********")
+                res = self.solve(inp, use_expression=o, power_level=ct_now)
+
+                if len(res) > 0:
+
+                    precision = precision_score(answer, res)
+                    recall = recall_score(answer, res)
+                    f1 = f1_score(answer, res)
+                    print(f"Precision: {precision * 100:.2f}%")
+                    print(f"Recall: {recall * 100:.2f}%")
+                    print(f"F1 Score: {f1 * 100:.2f}%")
+                    ee = (f1 +min(precision,recall))/2-(len(reg.last_solve_expression.split("&"))+len(reg.last_solve_expression.split("|")))/5000*elements_count_penalty
+                    print(f"Effectiveness & Efficiency Score: {ee * 100:.3f}%")
+                    if best_ee < ee:
+                        best_ee = ee
+                        win_option = o
+                        win_expr = reg.last_solve_expression
+                        opt_precision = precision
+                        opt_recall = recall
+                        opt_f1 = f1
+            if best_ee_sofar < best_ee * 0.985:
+                ct_opt = ct_now
+                best_ee_sofar = best_ee
+                ct_now = ct_now + jump
+                win_option_sofar = win_option
+                expr_opt = win_expr
+                opt_precision_sofar = opt_precision
+                opt_recall_sofar = opt_recall
+                opt_f1_sofar = opt_f1
+            elif jump == 1:
+                print("")
+                print("")
+                print("")
+                print("")
+                print("##### MISSION COMPLETE #####")
+                print("")
+                print("Optimum power level is", ct_opt, "with", win_option_sofar)
+                print("")
+                print(f"Precision: {opt_precision_sofar * 100:.2f}%")
+                print(f"Recall: {opt_recall_sofar * 100:.2f}%")
+                print(f"F1 Score: {opt_f1_sofar * 100:.2f}%")
+                print(f"Effectiveness & Efficiency Score: {best_ee_sofar * 100:.3f}%")
+                print("Expression:")
+                print(self.replaceSegName(expr_opt))
+                break
+            else:
+                jump = int(jump/2)
+                ct_now = ct_now - jump
 
 
 
