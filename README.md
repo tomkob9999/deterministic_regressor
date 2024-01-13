@@ -25,6 +25,16 @@ Precision: 94.37%,
 Recall: 98.60%, 
 F1 Score: 96.44%
 
+OR
+
+(mean_area <= 732.4 & mean_concave_points <= 0.04951 & 21.4 < worst_texture <= 30.76) | (mean_area <= 732.4 & mean_texture <= 17.08 & worst_compactness <= 0.284) | (mean_area <= 732.4 & mean_texture <= 17.08 & worst_fractal_dimension <= 0.093) | (mean_concave_points <= 0.04951 & mean_texture <= 17.08) | (mean_concavity <= 0.1065 & mean_texture <= 17.08 & worst_compactness <= 0.284) | (mean_concavity <= 0.1065 & mean_texture <= 17.08 & worst_fractal_dimension <= 0.093) | (mean_perimeter <= 79.85) | (mean_radius <= 12.25) | (mean_texture <= 17.08 & worst_area <= 1189.0 & worst_compactness <= 0.284) | (mean_texture <= 17.08 & worst_compactness <= 0.284 & worst_concavity <= 0.312) | (mean_texture <= 17.08 & worst_perimeter <= 100.4) | (worst_concave_points <= 0.07262)
+
+Precision: 95.18%, 
+Recall: 94.12%,
+F1 Score: 94.65%
+
+They look completetely different but generates very similar patterns.
+
 TO-DO-FUTURE:
 - n/a
 
