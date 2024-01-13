@@ -19,11 +19,11 @@ The UNION is the default option.  With the confidence threshold (defaulted to 3)
 Sample Test:
 A sample test has been done for sklearn.datasets.load_breast_cancer dataset (https://archive.ics.uci.edu/dataset/17/breast+cancer+wisconsin+diagnostic).  The train data was randomly picked 228 out of 569, and the whole 569 were used as the test data.  The regressor found the logical expression below and the stats.
 
-(fractal_dimension_error <= 0.008093 & worst_perimeter <= 100.4) | (mean_area <= 732.4 & mean_concave_points <= 0.04951 & worst_concavity <= 0.3120) | (mean_area <= 732.4 & worst_concavity <= 0.3120 & worst_compactness <= 0.2840) | (mean_area <= 732.4 & mean_concavity <= 0.1065 & worst_concavity <= 0.3120) | (mean_area <= 732.4 & worst_compactness <= 0.2840 & worst_concavity <= 0.3120) | (mean_concave_points <= 0.04951 & worst_area <= 1189.0 & worst_concavity <= 0.3120) | (mean_concave_points <= 0.04951 & worst_perimeter <= 100.4) | (mean_concavity <= 0.1065 & worst_perimeter <= 100.4)
+((fractal_dimension_error <= 0.004506 & 11.38 < worst_radius <= 14.92) | (mean_concave_points <= 0.0248) | (perimeter_error <= 3.399 & worst_concavity <= 0.1565) | (perimeter_error <= 3.399 & 11.38 < worst_radius <= 14.92) | (radius_error <= 0.4565 & worst_concavity <= 0.1565) | (radius_error <= 0.4565 & 11.38 < worst_radius <= 14.92) | (worst_area <= 689.1) | (75.4 < worst_perimeter <= 100.4)) & ((worst_area <= 689.1 | 14.92 < worst_radius <= 18.33))
 
-Precision: 94.43%
-Recall: 94.96%
-F1 Score: 94.69%
+Precision: 96.97%, 
+Recall: 89.64%, 
+F1 Score: 93.16%
 
 
 TO-DO-FUTURE:
