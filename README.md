@@ -2,6 +2,8 @@
 
 This is a deductive ML model based on deterministic approach unlike much of existing models that are stochastics and search for the trend using the minimum sum of euclidean distances, the optimimum coeeficients by gradient descent or minimizining the entropies to divide segments, etc.  This model instead searches for the logical expression that determins the final true/false decisions.  The existing models cannot overcome the complexity of AND/OR relationships of input variables because the regression models measures the euclidean distances and the deicision tree tries to optimize the information gain for each branch and is not fully deterministic, but this model can search for only the deterministic relations and can find the most inricate relationships.
 
+One of the advantages, maybe the biggetst, is that the derevied model is 100% explicit and understandable, which is very foreign to regular ML models where the trained models are almost black-box or hardly understandable.  The derived expressions are totally independent from the tool, and they can be studied or manually enhanced or even can be used on any programming languages as part of if-else conditions, or even Excel equations.
+
 This tool generates a boolean expression by regressing the values of input Boolean variables.  Overall, it works by creating logic expressions separately for true cases and false cases.
 
 It generates 2 logic expressions by train.
