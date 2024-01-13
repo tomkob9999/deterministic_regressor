@@ -21,21 +21,11 @@ The UNION is the default option.  With the confidence threshold (defaulted to 3)
 Sample Test:
 A sample test has been done for sklearn.datasets.load_breast_cancer dataset (https://archive.ics.uci.edu/dataset/17/breast+cancer+wisconsin+diagnostic).  The train data was randomly picked 228 out of 569, and the whole 569 were used as the test data.  The regressor found the logical expression below and the stats.
 
-(0.09723 < concavity_error <= 0.1535 | mean_concave_points <= 0.04951 | 0.07262 < worst_concave_points <= 0.1453) & (mean_concave_points <= 0.04951 | mean_texture <= 17.08 | worst_perimeter <= 100.4) & (mean_concave_points <= 0.04951 | worst_perimeter <= 100.4 | worst_texture <= 21.4)
+((mean_perimeter <= 79.85 & worst_concavity <= 0.312)) | ((mean_compactness <= 0.1002 | 0.07262 < worst_concave_points <= 0.1453 | worst_perimeter <= 100.4) & (mean_concave_points <= 0.04951 | mean_texture <= 17.08 | worst_perimeter <= 100.4) & (mean_concave_points <= 0.04951 | 0.07262 < worst_concave_points <= 0.1453 | worst_perimeter <= 100.4) & (mean_concave_points <= 0.04951 | worst_perimeter <= 100.4 | worst_texture <= 21.4) & (worst_concave_points <= 0.07262 | 0.07262 < worst_concave_points <= 0.1453 | worst_perimeter <= 100.4))
 
-Precision: 94.37%, 
-Recall: 98.60%, 
-F1 Score: 96.44%
-
-OR
-
-(mean_area <= 732.4 & mean_concave_points <= 0.04951 & 21.4 < worst_texture <= 30.76) | (mean_area <= 732.4 & mean_texture <= 17.08 & worst_compactness <= 0.284) | (mean_area <= 732.4 & mean_texture <= 17.08 & worst_fractal_dimension <= 0.093) | (mean_concave_points <= 0.04951 & mean_texture <= 17.08) | (mean_concavity <= 0.1065 & mean_texture <= 17.08 & worst_compactness <= 0.284) | (mean_concavity <= 0.1065 & mean_texture <= 17.08 & worst_fractal_dimension <= 0.093) | (mean_perimeter <= 79.85) | (mean_radius <= 12.25) | (mean_texture <= 17.08 & worst_area <= 1189.0 & worst_compactness <= 0.284) | (mean_texture <= 17.08 & worst_compactness <= 0.284 & worst_concavity <= 0.312) | (mean_texture <= 17.08 & worst_perimeter <= 100.4) | (worst_concave_points <= 0.07262)
-
-Precision: 95.18%, 
-Recall: 94.12%,
-F1 Score: 94.65%
-
-They look completetely different but generates very similar patterns.
+Precision: 93.87%
+Recall: 98.60%
+F1 Score: 96.17%
 
 TO-DO-FUTURE:
 - n/a
