@@ -49,3 +49,8 @@ a	b	c	d	e	f	g	Res
 Sample image:
 
 ![aa6](https://github.com/tomkob9999/dnf_regression_resolver/assets/96751911/3bc22090-5ed2-46b0-b5bb-a1998b539286)
+
+Here is solve() execution result sample.  Stats are taken by scipy commands (precision_score(), recall_score(), f1_score()).
+
+![aa7](https://github.com/tomkob9999/dnf_regression_solver/assets/96751911/4b45de5d-9288-41b5-b1d6-233e5211af34)
+
