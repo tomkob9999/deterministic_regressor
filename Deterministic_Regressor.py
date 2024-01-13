@@ -1,6 +1,6 @@
 # Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 2.5.1
+# Version: 2.5.2
 # Date: 2024/01/13
 
 import itertools
@@ -144,7 +144,8 @@ class Deterministic_Regressor:
         
         true_exp = self.expression_true
         false_exp = self.expression_false
-
+        active_true_clauses = 0
+        active_false_clauses = 0
 #         print("true_exp before", true_exp)
 #         print("false_exp before", false_exp)
         if confidence_thresh > 0:
@@ -157,8 +158,10 @@ class Deterministic_Regressor:
 #                     print("confidence_level_thresh", confidence_thresh)
                     if self.true_confidence[s] >= confidence_thresh:
                         true_list.append(s)
+                        active_true_clauses += 1
                 else:
                     true_list.append(s)
+                    active_true_clauses += 1
             true_exp = " | ".join(true_list)
             
             false_list = []
@@ -170,8 +173,10 @@ class Deterministic_Regressor:
 #                     print("confidence_level_thresh", confidence_thresh)
                     if self.false_confidence[s] >= confidence_thresh:
                         false_list.append(s)
+                        active_false_clauses += 1
                 else:
                     false_list.append(s)
+                    active_false_clauses += 1
             false_exp = " & ".join(false_list)
             
 #         print("true_exp after", true_exp)
@@ -182,11 +187,13 @@ class Deterministic_Regressor:
                 print("The true expression is not available")
                 return []
             expr = true_exp
+            print(str(active_true_clauses) + " true clauses activated")
         elif use_expression == "false":
             if false_exp == "":
                 print("The false expression is not available")
                 return []
             expr = false_exp
+            print(str(active_false_clauses) + " false clauses activated")
         elif use_expression == "common":
             if true_exp == "":
                 print("The true expression is not available")
@@ -195,6 +202,8 @@ class Deterministic_Regressor:
                 print("The false expression is not available")
                 return []
             expr = "(" + true_exp + ") & (" + false_exp + ")"
+            print(str(active_true_clauses) + " true clauses activated")
+            print(str(active_false_clauses) + " false clauses activated")
         else: # union case
             if self.expression_true == "":
                 print("The true expression is not available")
@@ -203,6 +212,8 @@ class Deterministic_Regressor:
                 print("The false expression is not available")
                 return []
             expr = "(" + true_exp + ") | (" + false_exp + ")"
+            print(str(active_true_clauses) + " true clauses activated")
+            print(str(active_false_clauses) + " false clauses activated")
 
 
         print("Solver Expression:")
@@ -247,7 +258,8 @@ class Deterministic_Regressor:
             countNonBool = len(data[c]) - (data[c] == 0).sum() - (data[c] == 1).sum()
             if countNonBool == 0 and pd.api.types.is_numeric_dtype(data[c]):
                 new_cols.append(c)
-
+        
+#         print("cols", cols)
         data = data.filter(items=new_cols)
 
         data_list = [data.columns.tolist()] + data.values.tolist()
@@ -292,7 +304,7 @@ class Deterministic_Regressor:
             inp = data_list
 
 # # # ############## TO BE REMOVED ############## 
-#         CUT_PCT = 70
+#         CUT_PCT = 40
 #         print("num recs before", len(inp))
 #         inp = Deterministic_Regressor.reduce_rows_except_first(inp, CUT_PCT)
 #         print("num recs after", len(inp))
@@ -356,6 +368,8 @@ class Deterministic_Regressor:
             dic_opp[int(s, 2)] = truefalse
 
                 
+        MAX_REPS = 2000000
+        
         print("Deriving true expressions...")
         dnf_perf = list()
         raw_perf = list()
@@ -367,7 +381,7 @@ class Deterministic_Regressor:
             l = [ii for ii in range(numvars)]
             p_list = list(itertools.combinations(l, len_dnf))
             print(str(len_dnf) + " variable patterns")
-            if len(p_list) > 1000000:
+            if len(p_list) > MAX_REPS:
                 print("Skipping because " + str(len(p_list)) + " combinations is too many")
                 break
             true_test_pass = True
@@ -416,7 +430,7 @@ class Deterministic_Regressor:
                     l = [ii for ii in range(numvars)]
                     p_list = list(itertools.combinations(l, len_dnf))
                     print(str(len_dnf) + " variable patterns")
-                    if len(p_list) > 1000000:
+                    if len(p_list) > MAX_REPS:
                         print("Skipping because " + str(len(p_list)) + " combinations is too many")
                         break
 
@@ -453,7 +467,7 @@ class Deterministic_Regressor:
                     l = [ii for ii in range(numvars)]
                     p_list = list(itertools.combinations(l, len_dnf))
                     print(str(len_dnf) + " variable patterns")
-                    if len(p_list) > 1000000:
+                    if len(p_list) > MAX_REPS:
                         print("Skipping because " + str(len(p_list)) + " combinations is too many")
                         break
                     true_test_pass = True
@@ -492,7 +506,7 @@ class Deterministic_Regressor:
 
 #         print("dnf_perf_n", dnf_perf_n)
         
-#         print("size of false cnf in negative form " + str(len(dnf_perf_n)))
+        print("size of false cnf " + str(len(dnf_perf_n)))
 #         if len(dnf_perf_n) > 10000:
 #             print("cutting to only 10000 of false dnf in negative form randomly as they are too many")
 #             dnf_perf_n = random.sample(dnf_perf_n, 10000)
@@ -550,8 +564,6 @@ class Deterministic_Regressor:
         print("")
         
         return inp
-
-
 
 
 
