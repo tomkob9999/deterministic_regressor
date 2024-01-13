@@ -1,6 +1,6 @@
 # Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 2.5.3
+# Version: 2.5.5
 # Date: 2024/01/13
 
 import itertools
@@ -68,6 +68,31 @@ class Deterministic_Regressor:
 # #         return str
 #         return filtered_lists
 
+
+    def cnf_to_dnf_str(str):
+        ss = str.split("&")
+        ss = [a.strip()[1:-1] if a.strip()[0] == "(" else a for a in ss]
+        cnf = [[b.strip() for b in sa.strip().split("|")] for sa in ss]
+
+        dnf = []
+        for clause in cnf:
+            dnf_clause = []
+            for literal in clause:
+#                 dnf_clause.append([literal])
+                dnf_clause.append(literal)
+            dnf.append(dnf_clause)
+    #     return [list(x) for x in itertools.product(*dnf)]
+        dnfl = [list(x) for x in itertools.product(*dnf)]
+#         dnfl = [["".join(dd) for dd in d] for d in dnfl]
+        dnfl = [set(d) for d in dnfl]
+        filtered_sets = DNF_Regression_solver.remove_supersets(dnfl)
+        filtered_lists = [sorted(list(f)) for f in sorted(filtered_sets)]
+        filtered_lists = [" & ".join(f) for f in sorted(filtered_lists)]
+        str = "(" + ") | (".join(filtered_lists) + ")"
+    #     print("str", str)
+        return str
+#         return filtered_lists
+    
     
     def simplify_dnf(s, use_cnf=False):
         tok1 = "|"
@@ -209,7 +234,7 @@ class Deterministic_Regressor:
             print(str(active_true_clauses) + " true clauses activated")
             print(str(active_false_clauses) + " false clauses activated")
         else: # union case
-            if self.expression_true == "":
+            if true_exp == "":
                 print("The true expression is not available")
                 return []
             if false_exp == "":
@@ -319,12 +344,12 @@ class Deterministic_Regressor:
         print("")
 
         imp_before_row_reduction = copy.deepcopy(inp)
-# # ############## COMMENT OUT UNLESS TESTING ############## 
+# # # ############## COMMENT OUT UNLESS TESTING ############## 
 #         CUT_PCT = 60
 #         print("NUM RECS BEFORE REDUCTION FOR TEST", len(inp))
 #         inp = Deterministic_Regressor.reduce_rows_except_first(inp, CUT_PCT)
 #         print("NUM RECS AFTER REDUCTION FOR TEST", len(inp))
-# # ############## COMMENT OUT UNLESS TESTING ############## 
+# # # ############## COMMENT OUT UNLESS TESTING ############## 
 
         
         numvars = len(inp[1])-1
@@ -572,6 +597,7 @@ class Deterministic_Regressor:
         
 #         return inp
         return imp_before_row_reduction
+
 
 
 
