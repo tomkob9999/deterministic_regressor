@@ -1,6 +1,6 @@
 # Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 2.5.5
+# Version: 2.5.6
 # Date: 2024/01/13
 
 import itertools
@@ -118,13 +118,24 @@ class Deterministic_Regressor:
         return str
 
     def try_convert_to_numeric(text):
-        for func in (int, float, complex):
-            try:
-                return func(text)
-            except ValueError:
-                pass
-
+        if isinstance(text, str):
+            if "." in text:
+                try:
+                    return float(text)
+                except ValueError:
+                    pass
+            else:
+                try:
+                    return int(text)
+                except ValueError:
+                    pass
         return text  # Return the original string if conversion fails
+#             for func in (int, float, complex):
+#                 try:
+#                     return func(text)
+#                 except ValueError:
+#                     pass
+#         return text  # Return the original string if conversion fails
 
     def convTuple2bin(t, width):
         i = 1
@@ -254,7 +265,7 @@ class Deterministic_Regressor:
 
     def generate_segment_ranks(df, num_segments, name, silent=False):
     #     df = pd.DataFrame({name: data})
-    #     print("df", df)
+#         print("df", df)
         df[name + '_rank'] = pd.cut(df[name], bins=num_segments, labels=False)
         df[name + '_label'] = pd.cut(df[name], bins=num_segments, labels=[f'{name} {i+1}' for i in range(num_segments)])
         min_max_per_group = df.groupby(name + '_rank')[name].agg(['max'])
@@ -272,7 +283,7 @@ class Deterministic_Regressor:
         values = [d[:-1] for d in data_list[1:]]
         data = pd.DataFrame(values, columns=headers) 
 
-#         print("data", data)
+        
         cols = [c for c in data.columns]
         for c in cols:
             countNonBool = len(data[c]) - (data[c] == 0).sum() - (data[c] == 1).sum()
@@ -333,23 +344,23 @@ class Deterministic_Regressor:
         else:
             inp = data_list
 
+        
         print("Train Records:", len(inp)-1)
     
         inp = [[Deterministic_Regressor.try_convert_to_numeric(inp[i][j]) for j in range(len(inp[i]))] for i in range(len(inp))]
         
-#         print("inp", inp)
-#         print("len(inp[1])", len(inp[1]))
         print("Discretizing...")
         inp = Deterministic_Regressor.discretize_data(inp, by_four)
         print("")
 
+        
         imp_before_row_reduction = copy.deepcopy(inp)
-# # # ############## COMMENT OUT UNLESS TESTING ############## 
+# # # # ############## COMMENT OUT UNLESS TESTING ############## 
 #         CUT_PCT = 60
 #         print("NUM RECS BEFORE REDUCTION FOR TEST", len(inp))
 #         inp = Deterministic_Regressor.reduce_rows_except_first(inp, CUT_PCT)
 #         print("NUM RECS AFTER REDUCTION FOR TEST", len(inp))
-# # # ############## COMMENT OUT UNLESS TESTING ############## 
+# # # # ############## COMMENT OUT UNLESS TESTING ############## 
 
         
         numvars = len(inp[1])-1
