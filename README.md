@@ -21,11 +21,13 @@ The UNION is the default option.  With the confidence threshold (defaulted to 3)
 Sample Test:
 A sample test has been done for sklearn.datasets.load_breast_cancer dataset (https://archive.ics.uci.edu/dataset/17/breast+cancer+wisconsin+diagnostic).  The train data was randomly picked 228 out of 569, and the whole 569 were used as the test data.  The regressor found the logical expression below and the stats.
 
-((mean_perimeter <= 79.85 & worst_concavity <= 0.312)) | ((mean_compactness <= 0.1002 | 0.07262 < worst_concave_points <= 0.1453 | worst_perimeter <= 100.4) & (mean_concave_points <= 0.04951 | mean_texture <= 17.08 | worst_perimeter <= 100.4) & (mean_concave_points <= 0.04951 | 0.07262 < worst_concave_points <= 0.1453 | worst_perimeter <= 100.4) & (mean_concave_points <= 0.04951 | worst_perimeter <= 100.4 | worst_texture <= 21.4) & (worst_concave_points <= 0.07262 | 0.07262 < worst_concave_points <= 0.1453 | worst_perimeter <= 100.4))
+Derived Expression:
+((mean_concave_points <= 0.04951 & mean_perimeter <= 79.85) | (worst_perimeter <= 100.4) | (worst_radius <= 14.92)) | ((mean_concave_points <= 0.04951 | worst_perimeter <= 100.4 | worst_texture <= 21.4))
 
-Precision: 93.87%
-Recall: 98.60%
-F1 Score: 96.17%
+Stats:
+Precision: 91.03%
+Recall: 99.44%
+F1 Score: 95.05%
 
 TO-DO-FUTURE:
 - n/a
