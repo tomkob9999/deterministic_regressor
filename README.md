@@ -14,7 +14,7 @@ It has 4 options for solve.
 - FALSE: FALSE CNF only
 - COMMON: intersection of TRUE DNF and FALSE CNF
 
-The UNION is the default option.  With the confidence threshold (defaulted to 3) properly set, it combines the best of both TRUE DNF and FALSE CNF.  The confidence threshold can be set to lower or higher based on the input data during training (not solve).  It can be as low as 0, but I think no need to set higher than 5 in normal settings.
+The UNION is the default option.  With the confidence threshold (defaulted to 3) properly set, it combines the best of both TRUE DNF and FALSE CNF.  The confidence threshold can be set to lower or higher based on the input data during training (not solve).  It can be as low as 0, but I think no need to set higher than 5 in normal settings.  Please note train() uses min_match as the threshold already, so there is no use in setting confidence threshhold lower than it.
 
 
 TO-DO-FUTURE:
