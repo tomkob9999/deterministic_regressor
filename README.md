@@ -1,10 +1,10 @@
 # Deterministic Logic Regression Model
 
-This is a deductive ML model based on deterministic approach unlike much of existing models that are stochastics and search for the trend using the minimum sum of euclidean distances, the optimimum coeeficients by gradient descent or minimizining the entropies to divide segments, etc.  This model instead searches for the logical expression that determins the final true/false decisions.  The existing models cannot overcome the complexity of AND/OR relationships of input variables because the regression models measures the euclidean distances and the deicision tree tries to optimize the information gain for each branch and is not fully deterministic, but this model can search for only the deterministic relations and can find the most inricate relationships.
+This is a deductive ML model based on deterministic approach unlike much of existing models that are stochastic and search for the trend or cleanest divider using the minimum sums of euclidean distances, optimization models using derivatives, etc.  This model instead searches for the logical expression that determins the final true/false decisions.  The existing models cannot seem overcome the complexity of AND/OR relationships of input variables even though ensemble or multi-kernel models like random forests or neural network are able to capture, but they seem to be more of randomized effects than nailing precisely.
 
-One of the advantages, maybe the biggetst, is that the derevied model is 100% explicit and understandable, which is very foreign to regular ML models where the trained models are almost black-box or hardly understandable.  The derived expressions are totally independent from the tool, and they can be studied or manually enhanced or even can be used on any programming languages as part of if-else conditions, or even Excel equations.
+One of the advantages, maybe the biggest, is that this derived trained model is 100% explicit and understandable, which is very foreign to regular ML models where the trained models are almost black-box or hardly human understandable.  The derived bool expressions are totally independent from the tool, and they can be studied, manually enhanced or even can be used on any programming languages, or even Excel equations.
 
-This tool generates a boolean expression by regressing the values of input Boolean variables.  Overall, it works by creating logic expressions separately for true cases and false cases.
+This tool generates a boolean expression by regressing the values of input variables.  Overall, it works by creating logic expressions separately for true cases and false cases.
 
 It generates 2 logic expressions by train.
 - TRUE DNF: The logic expression is derived for true judgements.  
@@ -16,7 +16,9 @@ It has 4 options for solve.
 - TRUE: TRUE DNF only
 - FALSE: FALSE CNF only
 
-The UNION is the default option.  With the confidence threshold (defaulted to 3) properly set, it tends to combine the best of both TRUE DNF and FALSE CNF.  The confidence threshold can be set to low or high based on the size of input data during train() (not solve()).  It can be as low as 0.  It is possible to hyper-parameterize by starting low and go higher until the accuracy declines as it tends to find the minimum, but still effective, set of logic clauses, which avoids overfitting and leads to better performance.  Please note train() uses min_match as the threshold already(defaulted to 3), so there is no use in setting confidence_thresh in solve() lower than min_match in train().
+The UNION is the default option.  With the confidence threshold properly set, the union option tends to combine the best of both TRUE DNF and FALSE CNF.  The confidence threshold can be set to low or high based on the size of input data during train() (not solve()).  It can be as low as 0.  It is possible to hyper-parameterize by starting low and go higher until the accuracy declines as it tends to find the minimum, but still effective, set of logic clauses, which avoids overfitting and leads to better performance.  Please note train() uses min_match as the threshold already(defaulted to 3), so there is no use in setting confidence_thresh in solve() lower than min_match in train().
+
+Now, it offers optimize_params() function that finds the best parameters using its own logic.
 
 Sample Test:
 A sample test has been done for sklearn.datasets.load_breast_cancer dataset (https://archive.ics.uci.edu/dataset/17/breast+cancer+wisconsin+diagnostic).  The train data was randomly picked 228 out of 569, and the whole 569 were used as the test data.  The regressor found the logical expression below and the stats.
