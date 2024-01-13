@@ -1,6 +1,6 @@
 # Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 2.5.6
+# Version: 2.5.7
 # Date: 2024/01/13
 
 import itertools
@@ -21,6 +21,9 @@ class Deterministic_Regressor:
         self.expression_false = ""
         self.true_confidence = {}
         self.false_confidence = {}
+        
+        self.tokens = []
+        self.dic_segments = {}
         
 #     def cnf_to_dnf(cnf):
 #         dnf_clauses = []
@@ -78,20 +81,15 @@ class Deterministic_Regressor:
         for clause in cnf:
             dnf_clause = []
             for literal in clause:
-#                 dnf_clause.append([literal])
                 dnf_clause.append(literal)
             dnf.append(dnf_clause)
-    #     return [list(x) for x in itertools.product(*dnf)]
         dnfl = [list(x) for x in itertools.product(*dnf)]
-#         dnfl = [["".join(dd) for dd in d] for d in dnfl]
         dnfl = [set(d) for d in dnfl]
         filtered_sets = DNF_Regression_solver.remove_supersets(dnfl)
         filtered_lists = [sorted(list(f)) for f in sorted(filtered_sets)]
         filtered_lists = [" & ".join(f) for f in sorted(filtered_lists)]
         str = "(" + ") | (".join(filtered_lists) + ")"
-    #     print("str", str)
         return str
-#         return filtered_lists
     
     
     def simplify_dnf(s, use_cnf=False):
@@ -257,24 +255,49 @@ class Deterministic_Regressor:
 
 
         print("Solver Expression:")
-        print(expr)
+#         print(expr)
+        print(self.replaceSegName(expr))
         
         for i in range(len(inp_list)):
             res[i] = Deterministic_Regressor.myeval(inp_list[i], tokens, expr)
         return res
 
-    def generate_segment_ranks(df, num_segments, name, silent=False):
+    def replaceSegName(self, str):
+        s = str
+        for t in self.tokens:
+            if t in s:
+                s = s.replace(t, self.dic_segments[t])
+        return s
+            
+            
+    def generate_segment_ranks(self, df, num_segments, name, silent=False):
     #     df = pd.DataFrame({name: data})
 #         print("df", df)
         df[name + '_rank'] = pd.cut(df[name], bins=num_segments, labels=False)
         df[name + '_label'] = pd.cut(df[name], bins=num_segments, labels=[f'{name} {i+1}' for i in range(num_segments)])
         min_max_per_group = df.groupby(name + '_rank')[name].agg(['max'])
+        
+        max_list = min_max_per_group.values.tolist()
+        prev_max_str = ""
+        ranks = sorted(df[name + '_rank'].unique().tolist())
+        for i in range(len(max_list)):
+#         for i in sorted(df[name + '_rank'].unique().tolist()):
+            if i == 0:
+                self.dic_segments[name + "_" + str(ranks[i])] = name + " <= " + str(max_list[i][0])
+                prev_max_str = str(max_list[i][0])
+            elif i == len(max_list) - 1:
+                self.dic_segments[name + "_" + str(ranks[i])] = prev_max_str + " < " + name
+            else:
+                self.dic_segments[name + "_" + str(ranks[i])] = prev_max_str + " < " + name + " <= " + str(max_list[i][0])
+                prev_max_str = str(max_list[i][0])
+            
+            
         if not silent:
             print("")
             print(min_max_per_group)
         return df
 
-    def discretize_data(data_list, by_four=1, silent=False):
+    def discretize_data(self, data_list, by_four=1, silent=False):
 
         result_header = data_list[0][-1]
         result_values = [d[-1] for d in data_list[1:]]
@@ -288,7 +311,8 @@ class Deterministic_Regressor:
         for c in cols:
             countNonBool = len(data[c]) - (data[c] == 0).sum() - (data[c] == 1).sum()
             if countNonBool > 0 and pd.api.types.is_numeric_dtype(data[c]):
-                result_df = Deterministic_Regressor.generate_segment_ranks(data, by_four*4, c, silent=silent)
+#                 result_df = Deterministic_Regressor.generate_segment_ranks(data, by_four*4, c, silent=silent)
+                result_df = self.generate_segment_ranks(data, by_four*4, c, silent=silent)
                 one_hot_df = pd.get_dummies(result_df[c + '_rank'], prefix=c)
                 one_hot_df = one_hot_df.astype(int)
                 data = pd.concat([result_df, one_hot_df], axis=1)
@@ -350,9 +374,10 @@ class Deterministic_Regressor:
         inp = [[Deterministic_Regressor.try_convert_to_numeric(inp[i][j]) for j in range(len(inp[i]))] for i in range(len(inp))]
         
         print("Discretizing...")
-        inp = Deterministic_Regressor.discretize_data(inp, by_four)
+        inp = self.discretize_data(inp, by_four)
         print("")
 
+#         print("self.dic_segments", self.dic_segments)
         
         imp_before_row_reduction = copy.deepcopy(inp)
 # # # # ############## COMMENT OUT UNLESS TESTING ############## 
@@ -378,6 +403,8 @@ class Deterministic_Regressor:
 
         print("Columns:")
         print(inp[0])
+        self.tokens = copy.deepcopy(inp[0])
+        
         print("")
         
         if max_dnf_len > numvars - 1:
@@ -586,8 +613,16 @@ class Deterministic_Regressor:
         print("--------------------------------")
 
         if len(set_dnf_true) > 0:
-#             print(" | ".join(set_dnf_true))
-            print(self.expression_true)
+#             print(self.expression_true)
+            print(self.replaceSegName(self.expression_true))
+    
+#             s = self.expression_true
+#             for t in tokens:
+#                 if t in s:
+#                     print("t", t)
+#                     s = s.replace(t, self.dic_segments[t])
+#             print(s)
+            
 
         if check_false:
             print("")
@@ -595,10 +630,12 @@ class Deterministic_Regressor:
             print("--------------------------------")
             if len(set_cnf_false) > 0:
 #                 print(" | ".join(set_dnf_false))
-                print(self.expression_false)
+#                 print(self.expression_false)
+                print(self.replaceSegName(self.expression_false))
             
         perm_vars = list(set([xx for x in dnf_perf for xx in x] + [xx for x in dnf_perf_n for xx in x]))
-        not_picked = [inp[0][ii] for ii in range(len(inp[0])-1) if inp[0][ii] not in perm_vars]
+#         not_picked = [inp[0][ii] for ii in range(len(inp[0])-1) if inp[0][ii] not in perm_vars]
+        not_picked = [self.replaceSegName(inp[0][ii]) for ii in range(len(inp[0])-1) if inp[0][ii] not in perm_vars]
 
         print("")
         print("Unsolved variables - " + str(len(not_picked)) + "/" + str(len(inp[0])-1))
@@ -608,8 +645,6 @@ class Deterministic_Regressor:
         
 #         return inp
         return imp_before_row_reduction
-
-
 
 
 
