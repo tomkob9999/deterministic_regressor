@@ -1,6 +1,6 @@
 # Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 2.6.3
+# Version: 2.6.4
 # Date: 2024/01/14
 
 import itertools
@@ -443,7 +443,7 @@ class Deterministic_Regressor:
 #         print("NUM RECS BEFORE REDUCTION FOR TEST", len(inp))
 #         inp = Deterministic_Regressor.reduce_rows_except_first(inp, CUT_PCT)
 #         print("NUM RECS AFTER REDUCTION FOR TEST", len(inp))
-# # # ############## COMMENT OUT UNLESS TESTING ############## 
+# # ############## COMMENT OUT UNLESS TESTING ############## 
 
         
         numvars = len(inp[1])-1
@@ -758,7 +758,7 @@ class Deterministic_Regressor:
                 print("")
                 print("#################################")
                 print("")
-                break
+                return win_option_sofar, ct_opt
 
 
 
