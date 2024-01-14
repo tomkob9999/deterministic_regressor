@@ -1,6 +1,6 @@
 # Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 2.6.5
+# Version: 2.6.6
 # Date: 2024/01/14
 
 import itertools
@@ -184,9 +184,15 @@ class Deterministic_Regressor:
                 s = s.strip()
                 if s in self.false_confidence:
                     if self.false_confidence[s] >= false_confidence_thresh:
+#                         print("false_confidence_thresh", false_confidence_thresh)
+#                         print("self.false_confidence[s]", self.false_confidence[s])
+#                         print("s", s)
                         false_list.append(s)
                         active_false_clauses += 1
                 else:
+#                     print("NOT IN")
+#                     print("false_confidence_thresh", false_confidence_thresh)
+#                     print("s", s)
                     false_list.append(s)
                     active_false_clauses += 1
             false_exp = " & ".join(false_list)
@@ -582,7 +588,7 @@ class Deterministic_Regressor:
                         raw_perf_n.append([ii for ii in p_list[i]])
                         raw_perf2_n.append(b)       
 #                         self.false_confidence["(" + " | ".join(sorted(list(set([inp[0][ii] for ii in p_list[i]])))) + ")"] = cnt_all if cnt_unmatch == 0 else cnt_all/(cnt_unmatch+1)
-                        self.false_confidence["(" + " | ".join(sorted(list(set([inp[0][ii] for ii in p_list[i]])))) + ")"] = cnt_all - cnt_unmatch
+                        self.false_confidence["(" + " | ".join(sorted(list(set([inp[0][ii][2:] if inp[0][ii][0:2] == "n_" else "n_" + inp[0][ii] for ii in p_list[i]])))) + ")"] = cnt_all - cnt_unmatch
 #                 print("raw_perf_n", raw_perf_n)
             else:
                 for s in range(max_dnf_len):
@@ -617,7 +623,8 @@ class Deterministic_Regressor:
                             
                         raw_perf_n.append([ii for ii in p_list[i]])
                         raw_perf2_n.append(b)  
-                        self.false_confidence["(" + " | ".join(sorted(list(set([inp[0][ii] for ii in p_list[i]])))) + ")"] = cnt_all - cnt_unmatch
+#                         self.false_confidence["(" + " | ".join(sorted(list(set([inp[0][ii] for ii in p_list[i]])))) + ")"] = cnt_all - cnt_unmatch
+                        self.false_confidence["(" + " | ".join(sorted(list(set(["n_" + inp[0][ii] if inp[0][ii][:2] != "n_"  else "n_" + inp[0][ii] for ii in p_list[i]])))) + ")"] = cnt_all - cnt_unmatch
         
         for dn in raw_perf_n:
             dnf_perf_n.append(sorted(list(set([inp[0][ii] for ii in dn]))))
@@ -765,7 +772,7 @@ class Deterministic_Regressor:
                 print(f"F1 Score: {opt_f1_sofar * 100:.2f}%")
                 print(f"Effectiveness & Efficiency Score: {best_ee_sofar * 100:.3f}%")
                 print("Expression:")
-                print(self.replaceSegName(expr_opt))
+                print(self.replaceSegName(expr_opt).replace("(n_", "(NOT ").replace(" n_", " NOT "))
                 print("")
                 print("#################################")
                 print("")
