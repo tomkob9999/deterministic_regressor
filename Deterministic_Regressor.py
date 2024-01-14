@@ -1,6 +1,6 @@
 # Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 2.6.1
+# Version: 2.6.2
 # Date: 2024/01/14
 
 import itertools
@@ -144,18 +144,30 @@ class Deterministic_Regressor:
             
         
     def solve(self, inp_p, check_negative=True, use_expression="union", confidence_thresh=3, power_level=None):
+        
         inp = [[Deterministic_Regressor.try_convert_to_numeric(inp_p[i][j]) for j in range(len(inp_p[i]))] for i in range(len(inp_p))]
+        
+        max_power = 64
         
         true_confidence_thresh = 0
         false_confidence_thresh = 0
         if power_level is not None:
+            if power_level > max_power or power_level < 0:
+                print("power_level must be between 0 and 32")
+                return
+            
             max_freq = max([v for k, v in self.true_confidence.items()])
+            min_freq = min([v for k, v in self.true_confidence.items()])
+            power_level = int(power_level/max_power * (max_freq-min_freq) + 0.9999999999)
+            
             if max_freq - power_level < 0:
                 true_confidence_thresh = 0
             else:
                 true_confidence_thresh = max_freq - power_level
                 
             max_freq = max([v for k, v in self.false_confidence.items()])
+            min_freq = min([v for k, v in self.true_confidence.items()])
+            power_level = int(power_level/max_power * (max_freq-min_freq) + 0.9999999999)
             if max_freq - power_level < 0:
                 false_confidence_thresh = 0
             else:
@@ -818,7 +830,7 @@ class Deterministic_Regressor:
         best_ee_sofar = 0
         ct_now = 0
 
-        jump = 16
+        jump = 32
         ct_opt = 0
         expr_opt = ""
         win_option_sofar = ""
@@ -876,6 +888,7 @@ class Deterministic_Regressor:
                 print("#################################")
                 print("")
                 print("OPTIMUM POWER LEVEL is", ct_opt, "with", win_option_sofar)
+                print("")
                 print(f"Precision: {opt_precision_sofar * 100:.2f}%")
                 print(f"Recall: {opt_recall_sofar * 100:.2f}%")
                 print(f"F1 Score: {opt_f1_sofar * 100:.2f}%")
@@ -889,8 +902,6 @@ class Deterministic_Regressor:
             else:
                 jump = int(jump/2)
                 ct_now = ct_now - jump
-
-
 
 
 
