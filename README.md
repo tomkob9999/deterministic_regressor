@@ -24,13 +24,12 @@ Sample Test:
 A sample test has been done for sklearn.datasets.load_breast_cancer dataset (https://archive.ics.uci.edu/dataset/17/breast+cancer+wisconsin+diagnostic).  The train data was randomly picked 228 out of 569, and the whole 569 were used as the test data.  The regressor found the logical expression below and the stats.
 
 Derived Expression:
-((mean_area <= 732.4 & worst_compactness <= 0.284)) | ((mean_concave_points <= 0.04951 | worst_radius <= 14.92))
+((mean_area <= 732.4 & worst_compactness <= 0.284 & worst_concavity <= 0.312) | (mean_concave_points <= 0.04951 & worst_concavity <= 0.312)) | ((0.02193 < fractal_dimension_error | mean_concave_points <= 0.04951 | worst_perimeter <= 100.4))
 
 Stats:
-Precision: 92.31%
-Recall: 97.48%
-F1 Score: 94.82%
-Effectiveness & Efficiency Score: 93.465% (original score that uses the size of expression plus the above stats)
+Precision: 92.84%, 
+Recall: 98.04%, 
+F1 Score: 95.37%
 
 TO-DO-FUTURE:
 - n/a
