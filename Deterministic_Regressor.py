@@ -1,6 +1,6 @@
 # Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 2.5.9
+# Version: 2.6.1
 # Date: 2024/01/14
 
 import itertools
@@ -146,15 +146,27 @@ class Deterministic_Regressor:
     def solve(self, inp_p, check_negative=True, use_expression="union", confidence_thresh=3, power_level=None):
         inp = [[Deterministic_Regressor.try_convert_to_numeric(inp_p[i][j]) for j in range(len(inp_p[i]))] for i in range(len(inp_p))]
         
+        true_confidence_thresh = 0
+        false_confidence_thresh = 0
         if power_level is not None:
-            max_freq = max(max([v for k, v in self.true_confidence.items()]), max([v for k, v in self.false_confidence.items()]))
-            
+            max_freq = max([v for k, v in self.true_confidence.items()])
             if max_freq - power_level < 0:
-                confidence_thresh = 0
+                true_confidence_thresh = 0
             else:
-                confidence_thresh = max_freq - power_level
-        print("confidence_thresh:", confidence_thresh)
+                true_confidence_thresh = max_freq - power_level
                 
+            max_freq = max([v for k, v in self.false_confidence.items()])
+            if max_freq - power_level < 0:
+                false_confidence_thresh = 0
+            else:
+                false_confidence_thresh = max_freq - power_level
+            
+        else:
+            true_confidence_thresh = confidence_thresh
+            false_confidence_thresh = confidence_thresh
+        
+        print("true_confidence_thresh:", true_confidence_thresh)
+        print("false_confidence_thresh:", false_confidence_thresh)
         print("Input Records:", len(inp)-1)
         
         numvars = len(inp[0])
@@ -182,7 +194,7 @@ class Deterministic_Regressor:
             for s in true_exp.split("|"):
                 s = s.strip()
                 if s in self.true_confidence:
-                    if self.true_confidence[s] >= confidence_thresh:
+                    if self.true_confidence[s] >= true_confidence_thresh:
                         true_list.append(s)
                         active_true_clauses += 1
                 else:
@@ -194,7 +206,7 @@ class Deterministic_Regressor:
             for s in false_exp.split("&"):
                 s = s.strip()
                 if s in self.false_confidence:
-                    if self.false_confidence[s] >= confidence_thresh:
+                    if self.false_confidence[s] >= false_confidence_thresh:
                         false_list.append(s)
                         active_false_clauses += 1
                 else:
@@ -247,7 +259,120 @@ class Deterministic_Regressor:
         for i in range(len(inp_list)):
             res[i] = Deterministic_Regressor.myeval(inp_list[i], tokens, expr)
         return res
+    
+    
+#     def solve(self, inp_p, check_negative=True, use_expression="union", confidence_thresh=3, power_level=None):
+#         inp = [[Deterministic_Regressor.try_convert_to_numeric(inp_p[i][j]) for j in range(len(inp_p[i]))] for i in range(len(inp_p))]
+        
+#         if power_level is not None:
+#             max_freq = 0
+#             if use_expression == "union" or use_expression == "common": 
+#                 max_freq = min(max([v for k, v in self.true_confidence.items()]), max([v for k, v in self.false_confidence.items()]))
+#             elif use_expression == "true":
+#                 max_freq = max([v for k, v in self.true_confidence.items()])
+#             else:
+#                 max_freq = max([v for k, v in self.false_confidence.items()])
+            
+#             if max_freq - power_level < 0:
+#                 confidence_thresh = 0
+#             else:
+#                 confidence_thresh = max_freq - power_level
+# #         print("confidence_thresh:", confidence_thresh)
+                
+#         print("Input Records:", len(inp)-1)
+        
+#         numvars = len(inp[0])
 
+#         if check_negative:
+#             for i in range(numvars):
+#                 inp[0].insert(i+numvars, "n_" + inp[0][i])
+#             for j in range(1, len(inp), 1):
+#                 for i in range(numvars):
+#                     inp[j].insert(i+numvars,0 if inp[j][i] == 1 else 1)
+#             numvars *= 2
+
+#         tokens = inp[0]
+#         inp_list = [row for row in inp[1:]]
+        
+#         res = list(range(len(inp_list)))
+#         expr = ""
+        
+#         true_exp = self.expression_true
+#         false_exp = self.expression_false
+#         active_true_clauses = 0
+#         active_false_clauses = 0
+#         if confidence_thresh > 0:
+#             true_list = []
+#             for s in true_exp.split("|"):
+#                 s = s.strip()
+#                 if s in self.true_confidence:
+#                     if self.true_confidence[s] >= confidence_thresh:
+#                         true_list.append(s)
+#                         active_true_clauses += 1
+#                 else:
+#                     true_list.append(s)
+#                     active_true_clauses += 1
+#             true_exp = " | ".join(true_list)
+            
+#             false_list = []
+#             for s in false_exp.split("&"):
+#                 s = s.strip()
+#                 if s in self.false_confidence:
+#                     if self.false_confidence[s] >= confidence_thresh:
+#                         false_list.append(s)
+#                         active_false_clauses += 1
+#                 else:
+#                     false_list.append(s)
+#                     active_false_clauses += 1
+#             false_exp = " & ".join(false_list)
+#         else:
+#             active_true_clauses = len(true_exp.split("|"))
+#             active_false_clauses = len(false_exp.split("&"))
+            
+#         if use_expression == "true":
+#             if true_exp == "":
+#                 print("The true expression is not available")
+#                 return []
+#             expr = true_exp
+#             print(str(active_true_clauses) + " true clauses activated")
+#         elif use_expression == "false":
+#             if false_exp == "":
+#                 print("The false expression is not available")
+#                 return []
+#             expr = false_exp
+#             print(str(active_false_clauses) + " false clauses activated")
+#         elif use_expression == "common":
+#             if true_exp == "":
+#                 print("The true expression is not available")
+#                 return []
+#             if false_exp == "":
+#                 print("The false expression is not available")
+#                 return []
+#             expr = "(" + true_exp + ") & (" + false_exp + ")"
+#             print(str(active_true_clauses) + " true clauses activated")
+#             print(str(active_false_clauses) + " false clauses activated")
+#         else: # union case
+#             if true_exp == "":
+#                 print("The true expression is not available")
+#                 return []
+#             if false_exp == "":
+#                 print("The false expression is not available")
+#                 return []
+#             expr = "(" + true_exp + ") | (" + false_exp + ")"
+#             print(str(active_true_clauses) + " true clauses activated")
+#             print(str(active_false_clauses) + " false clauses activated")
+
+
+#         print("Solver Expression:")
+#         print(self.replaceSegName(expr))
+        
+#         self.last_solve_expression = expr
+        
+#         for i in range(len(inp_list)):
+#             res[i] = Deterministic_Regressor.myeval(inp_list[i], tokens, expr)
+#         return res
+
+    
     def replaceSegName(self, str):
         s = str
         for t in self.tokens:
@@ -329,6 +454,98 @@ class Deterministic_Regressor:
 
         return sampled_rows
 
+    #     works only for toy data
+    def train_simple(self, file_path=None, data_list=None, max_dnf_len=4, by_four=1):
+
+        # Example usage:
+        # file_path = '/kaggle/input/dnf-regression/dnf_regression.txt'
+        # file_path = '/kaggle/input/tomio5/dnf_regression.txt'
+        
+        inp = None
+        if file_path is not None:
+            with open(file_path, 'r') as f:
+                inp = [line.strip().split('\t') for line in f]
+        else:
+            inp = data_list
+
+        
+        print("Train Records:", len(inp)-1)
+    
+        inp = [[Deterministic_Regressor.try_convert_to_numeric(inp[i][j]) for j in range(len(inp[i]))] for i in range(len(inp))]
+        
+        print("Discretizing...")
+        inp = self.discretize_data(inp, by_four)
+        print("")
+        
+        imp_before_row_reduction = copy.deepcopy(inp)
+# # # ############## COMMENT OUT UNLESS TESTING ############## 
+        CUT_PCT = 60
+        print("NUM RECS BEFORE REDUCTION FOR TEST", len(inp))
+        inp = Deterministic_Regressor.reduce_rows_except_first(inp, CUT_PCT)
+        print("NUM RECS AFTER REDUCTION FOR TEST", len(inp))
+# # # ############## COMMENT OUT UNLESS TESTING ############## 
+
+        
+        numvars = len(inp[1])-1
+
+        print("Columns:")
+        print(inp[0])
+        self.tokens = copy.deepcopy(inp[0])
+        
+        print("")
+            
+        dic = dict()
+                    
+        dic_opp = dict()
+        
+        true_set = set()
+        false_set = set()
+        
+        for i in range(1, len(inp), 1):
+            s = ""
+            cnt_1 = 0
+            cnt_0 = 0
+            for j in range(len(inp[i]) - 1):
+                s += str(inp[i][j])
+                if inp[i][j] == 1:
+                    cnt_1 += 1
+                else:
+                    cnt_0 += 1
+                    
+            truefalse = inp[i][len(inp[i]) - 1]
+            dic[int(s, 2)] = truefalse
+            if truefalse == 1:
+                if cnt_1 <= max_dnf_len:
+                    true_set.add(s)
+            else:
+                if cnt_0 <= max_dnf_len:
+                    false_set.add(s)
+                    
+        true_dnf = Deterministic_Regressor.simplify_dnf("(" + ") | (".join([" & ".join([self.tokens[i] for i in range(len(f)) if f[i] == "1"]) for f in true_set]) + ")")
+        false_cnf = Deterministic_Regressor.simplify_dnf("(" + ") & (".join([" | ".join([self.tokens[i] for i in range(len(f)) if f[i] == "0"]) for f in false_set]) + ")", use_cnf=True)
+        if true_dnf == "()":
+            true_dnf = ""
+        if false_cnf == "()":
+            false_cnf = ""
+        self.expression_true = true_dnf
+        self.expression_false = false_cnf
+            
+        print("")
+        print("TRUE DNF - " + str(len(true_dnf.split("|"))))
+        print("--------------------------------")
+
+        if len(true_dnf) > 0:
+            print(self.replaceSegName(self.expression_true))
+            
+
+        print("")
+        print("FALSE CNF - " + str(len(false_cnf.split("&"))))
+        print("--------------------------------")
+        if len(false_cnf) > 0:
+            print(self.replaceSegName(self.expression_false))
+            
+        return imp_before_row_reduction
+    
     
     def train(self, file_path=None, data_list=None, max_dnf_len=4, check_false=True, check_negative=False, error_tolerance=0.02, by_four=1, min_match=3, use_approx_dnf=False):
 
@@ -359,12 +576,12 @@ class Deterministic_Regressor:
         print("")
         
         imp_before_row_reduction = copy.deepcopy(inp)
-# # # # ############## COMMENT OUT UNLESS TESTING ############## 
+# # # ############## COMMENT OUT UNLESS TESTING ############## 
 #         CUT_PCT = 60
 #         print("NUM RECS BEFORE REDUCTION FOR TEST", len(inp))
 #         inp = Deterministic_Regressor.reduce_rows_except_first(inp, CUT_PCT)
 #         print("NUM RECS AFTER REDUCTION FOR TEST", len(inp))
-# # # # ############## COMMENT OUT UNLESS TESTING ############## 
+# # # ############## COMMENT OUT UNLESS TESTING ############## 
 
         
         numvars = len(inp[1])-1
@@ -498,7 +715,9 @@ class Deterministic_Regressor:
                             
                         raw_perf_n.append([ii for ii in p_list[i]])
                         raw_perf2_n.append(b)       
+#                         self.false_confidence["(" + " | ".join(sorted(list(set([inp[0][ii] for ii in p_list[i]])))) + ")"] = cnt_all if cnt_unmatch == 0 else cnt_all/(cnt_unmatch+1)
                         self.false_confidence["(" + " | ".join(sorted(list(set([inp[0][ii] for ii in p_list[i]])))) + ")"] = cnt_all - cnt_unmatch
+#                 print("raw_perf_n", raw_perf_n)
             else:
                 for s in range(max_dnf_len):
                     len_dnf = s + 1
@@ -592,13 +811,14 @@ class Deterministic_Regressor:
         return imp_before_row_reduction
 
 
-    def optimize_params(self, test_data, answer, elements_count_penalty=1.0, jump=16):
+    def optimize_params(self, test_data, answer, elements_count_penalty=1.0, used_options=[]):
 
         inp = test_data
         
         best_ee_sofar = 0
         ct_now = 0
 
+        jump = 16
         ct_opt = 0
         expr_opt = ""
         win_option_sofar = ""
@@ -606,6 +826,10 @@ class Deterministic_Regressor:
         opt_recall_sofar = 0
         opt_f1_sofar = 0
 
+        ops = ["union", "common", "true", "false"]
+        if len(used_options) > 0:
+            ops = used_options
+        
         for i in range(100):
             print("")
             print("")
@@ -616,7 +840,7 @@ class Deterministic_Regressor:
             opt_precision = 0
             opt_recall = 0
             opt_f1 = 0
-            for o in ["union", "common", "true", "false"]:
+            for o in ops:
                 print("")
                 print("******* " + o + " ********")
                 res = self.solve(inp, use_expression=o, power_level=ct_now)
@@ -649,19 +873,18 @@ class Deterministic_Regressor:
                 opt_f1_sofar = opt_f1
             elif jump == 1:
                 print("")
+                print("#################################")
                 print("")
-                print("")
-                print("")
-                print("##### MISSION COMPLETE #####")
-                print("")
-                print("Optimum power level is", ct_opt, "with", win_option_sofar)
-                print("")
+                print("OPTIMUM POWER LEVEL is", ct_opt, "with", win_option_sofar)
                 print(f"Precision: {opt_precision_sofar * 100:.2f}%")
                 print(f"Recall: {opt_recall_sofar * 100:.2f}%")
                 print(f"F1 Score: {opt_f1_sofar * 100:.2f}%")
                 print(f"Effectiveness & Efficiency Score: {best_ee_sofar * 100:.3f}%")
                 print("Expression:")
                 print(self.replaceSegName(expr_opt))
+                print("")
+                print("#################################")
+                print("")
                 break
             else:
                 jump = int(jump/2)
@@ -673,33 +896,49 @@ class Deterministic_Regressor:
 
 
 
-###### SAMPLE EXECUTION #########
+##### SAMPLE EXECUTION #########
+
 
 import copy
 from sklearn.metrics import precision_score, recall_score, f1_score
+from sklearn.datasets import load_breast_cancer
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import accuracy_score, classification_report
+import time
 
-file_path = '/kaggle/input/tomio1/dnf_regression.txt'
+def measure(start_time):
+    end_time = time.time()
+
+    elapsed_time = end_time - start_time
+    minutes, seconds = divmod(elapsed_time, 60)
+    milliseconds = int(elapsed_time * 1000 % 1000)
+    return f"{int(minutes)}:{str(int(seconds)).zfill(2)}:{str(int(milliseconds)).zfill(3)}"
+           
+start_time = time.time()
+
+
+###### Load the breast cancer dataset ###### 
+data = load_breast_cancer()
+X, y = data.data, data.target
+X_list = [list(a) for a in X]
+y_list = list(y)
+heads = [f.replace(" ", "_") for f in data.feature_names]
+X_list.insert(0, heads)
+y_list.insert(0, "Result")
+data_list = [X_list[i] + [y_list[i]] for i in range(len(X_list))]
 
 reg = Deterministic_Regressor()
-inp = reg.train(file_path=file_path, error_tolerance=0.03, check_negative=True)
+inp = reg.train(data_list=data_list, error_tolerance=0.03, max_dnf_len=3, by_four=1, min_match=30)
+
+print("train() finished", measure(start_time))
+start_time = time.time()# # print(inp)
+
 
 answer = [int(inp[i][-1]) for i in range(1, len(inp), 1)]
-
 inp = [row[:-1] for row in inp]
-  
-# print(inp)
-res = reg.solve(inp, use_expression="false")
-# res = reg.solve(inp)
-print("Predicted")
-print(res)
-print("Actual")
-print(answer)
 
-precision = precision_score(answer, res)
-recall = recall_score(answer, res)
-f1 = f1_score(answer, res)
+reg.optimize_params(inp, answer)
+#reg.optimize_params(inp, answer, used_options=["union", "common"])
 
-print(f"Precision: {precision * 100:.2f}%")
-print(f"Recall: {recall * 100:.2f}%")
-print(f"F1 Score: {f1 * 100:.2f}%")
 
