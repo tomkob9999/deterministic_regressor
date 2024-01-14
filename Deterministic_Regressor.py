@@ -1,7 +1,7 @@
 # Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 2.6.7
-# Date: 2024/01/14
+# Version: 2.6.9
+# Date: 2024/01/15
 
 import itertools
 from sympy.logic import boolalg
@@ -425,7 +425,7 @@ class Deterministic_Regressor:
         return imp_before_row_reduction
     
     
-    def train(self, file_path=None, data_list=None, max_dnf_len=4, check_false=True, check_negative=False, error_tolerance=0.02, by_two=2, min_match=3, use_approx_dnf=False):
+    def train(self, file_path=None, data_list=None, max_dnf_len=4, check_false=True, check_negative=False, error_tolerance=0.02, by_two=2, min_match=3, use_approx_dnf=False, redundant_thresh=1.00):
 
 # file_path: input file in tab-delimited text
 # check_negative: enable to check the negative conditions or not.  This one is very heavy.
@@ -455,7 +455,7 @@ class Deterministic_Regressor:
         
         imp_before_row_reduction = copy.deepcopy(inp)
 # # # ############## COMMENT OUT UNLESS TESTING ############## 
-#         CUT_PCT = 60
+#         CUT_PCT = 80
 #         print("NUM RECS BEFORE REDUCTION FOR TEST", len(inp))
 #         inp = Deterministic_Regressor.reduce_rows_except_first(inp, CUT_PCT)
 #         print("NUM RECS AFTER REDUCTION FOR TEST", len(inp))
@@ -476,12 +476,29 @@ class Deterministic_Regressor:
         print("Columns:")
         print(inp[0])
         self.tokens = copy.deepcopy(inp[0])
+        print("")
         
+        numrows = len(inp)-1
+        redundant_cols = set()
+        for i in range(len(inp[0])-1):
+            for j in range(i+1, len(inp[0])-1):
+                if j in redundant_cols:
+                    break
+                sames = len([1 for k in range(1, len(inp), 1) if inp[k][i] == inp[k][j]])
+                if sames/numrows >= redundant_thresh:
+#                     print("sames", sames)
+#                     print("i", i)
+#                     print("j", j)
+#                     print("redundant", self.tokens[i])
+#                     print("redundant", self.tokens[j])
+                    redundant_cols.add(j)
+        print("Redundant Columns:")
+        print([self.replaceSegName(self.tokens[r]).replace("(n_", "(NOT ").replace(" n_", " NOT ") for r in sorted(redundant_cols)])
         print("")
         
         if max_dnf_len > numvars - 1:
             max_dnf_len = numvars - 1
-            
+        
         dic = dict()
                     
         dic_opp = dict()
@@ -520,6 +537,9 @@ class Deterministic_Regressor:
             
             l = [ii for ii in range(numvars)]
             p_list = list(itertools.combinations(l, len_dnf))
+            
+            p_list = [p for p in p_list if not any([pp in redundant_cols for pp in p])]
+            
             print(str(len_dnf) + " variable patterns")
             if len(p_list) > MAX_REPS:
                 print("Skipping because " + str(len(p_list)) + " combinations is too many")
@@ -566,6 +586,9 @@ class Deterministic_Regressor:
                     len_dnf = s + 1
                     l = [ii for ii in range(numvars)]
                     p_list = list(itertools.combinations(l, len_dnf))
+                    
+                    p_list = [p for p in p_list if not any([pp in redundant_cols for pp in p])]
+            
                     print(str(len_dnf) + " variable patterns")
                     if len(p_list) > MAX_REPS:
                         print("Skipping because " + str(len(p_list)) + " combinations is too many")
@@ -603,6 +626,9 @@ class Deterministic_Regressor:
 
                     l = [ii for ii in range(numvars)]
                     p_list = list(itertools.combinations(l, len_dnf))
+                    
+                    p_list = [p for p in p_list if not any([pp in redundant_cols for pp in p])]
+                    
                     print(str(len_dnf) + " variable patterns")
                     if len(p_list) > MAX_REPS:
                         print("Skipping because " + str(len(p_list)) + " combinations is too many")
@@ -712,7 +738,8 @@ class Deterministic_Regressor:
         best_ee_sofar = 0
         ct_now = 0
 
-        jump = 32
+        MAX_POWER_LEVEL = 64
+        jump = int(MAX_POWER_LEVEL/2)
         ct_opt = 0
         expr_opt = ""
         win_option_sofar = ""
@@ -749,7 +776,8 @@ class Deterministic_Regressor:
                     print(f"Precision: {precision * 100:.2f}%")
                     print(f"Recall: {recall * 100:.2f}%")
                     print(f"F1 Score: {f1 * 100:.2f}%")
-                    ee = (f1 +min(precision,recall))/2-(len(reg.last_solve_expression.split("&"))+len(reg.last_solve_expression.split("|")))/5000*elements_count_penalty
+#                     ee = (f1 +min(precision,recall))/2-(len(reg.last_solve_expression.split("&"))+len(reg.last_solve_expression.split("|")))/5000*elements_count_penalty
+                    ee = (f1 +min(precision,recall))/2-(len(reg.last_solve_expression.split("&"))+len(reg.last_solve_expression.split("|")))/4000*elements_count_penalty
                     print(f"Effectiveness & Efficiency Score: {ee * 100:.3f}%")
                     if best_ee < ee:
                         best_ee = ee
@@ -758,7 +786,8 @@ class Deterministic_Regressor:
                         opt_precision = precision
                         opt_recall = recall
                         opt_f1 = f1
-            if best_ee_sofar < best_ee * 0.985:
+#             if best_ee_sofar < best_ee * 0.985:
+            if best_ee_sofar < best_ee:
                 ct_opt = ct_now
                 best_ee_sofar = best_ee
                 ct_now = ct_now + jump
@@ -767,7 +796,7 @@ class Deterministic_Regressor:
                 opt_precision_sofar = opt_precision
                 opt_recall_sofar = opt_recall
                 opt_f1_sofar = opt_f1
-                if ct_now > 64:
+                if ct_now > MAX_POWER_LEVEL:
                     doexit = True
             elif jump == 1:
                 doexit = True
@@ -794,6 +823,7 @@ class Deterministic_Regressor:
                 print("#################################")
                 print("")
                 return win_option_sofar, ct_opt
+
 
 
 
