@@ -1,6 +1,6 @@
 # Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 2.6.4
+# Version: 2.6.5
 # Date: 2024/01/14
 
 import itertools
@@ -119,6 +119,8 @@ class Deterministic_Regressor:
 
             max_freq = max([v for k, v in self.true_confidence.items()])
             min_freq = min([v for k, v in self.true_confidence.items()])
+#             print("max_freq true", max_freq)
+#             print("min_freq true", min_freq)
             this_power = int(power_level/max_power * (max_freq-min_freq) + 0.9999999999)
             
             if max_freq - this_power < 0:
@@ -128,6 +130,8 @@ class Deterministic_Regressor:
                 
             max_freq = max([v for k, v in self.false_confidence.items()])
             min_freq = min([v for k, v in self.false_confidence.items()])
+#             print("max_freq false", max_freq)
+#             print("min_freq false", min_freq)
             this_power = int(power_level/max_power * (max_freq-min_freq) + 0.9999999999)
             if max_freq - this_power < 0:
                 false_confidence_thresh = 0
@@ -225,7 +229,7 @@ class Deterministic_Regressor:
 
 
         print("Solver Expression:")
-        print(self.replaceSegName(expr))
+        print(self.replaceSegName(expr).replace("(n_", "(NOT ").replace(" n_", " NOT "))
         
         self.last_solve_expression = expr
         
@@ -642,6 +646,10 @@ class Deterministic_Regressor:
         self.expression_true = " | ".join(set_dnf_true)
         self.expression_true = Deterministic_Regressor.simplify_dnf(self.expression_true)
         self.expression_false = Deterministic_Regressor.simplify_dnf(cnf, use_cnf=True)
+        
+        
+#         print("self.expression_true", self.expression_true)
+#         print("self.expression_false", self.expression_false)
 
             
             
@@ -650,7 +658,8 @@ class Deterministic_Regressor:
         print("--------------------------------")
 
         if len(set_dnf_true) > 0:
-            print(self.replaceSegName(self.expression_true))
+#             print(self.replaceSegName(self.expression_true))
+            print(self.replaceSegName(self.expression_true).replace("(n_", "(NOT ").replace(" n_", " NOT "))
             
 
         if check_false:
@@ -658,10 +667,12 @@ class Deterministic_Regressor:
             print("CNF FALSE - " + str(len(set_cnf_false)))
             print("--------------------------------")
             if len(set_cnf_false) > 0:
-                print(self.replaceSegName(self.expression_false))
+#                 print(self.replaceSegName(self.expression_false))
+                print(self.replaceSegName(self.expression_false).replace("(n_", "(NOT ").replace(" n_", " NOT "))
             
         perm_vars = list(set([xx for x in dnf_perf for xx in x] + [xx for x in dnf_perf_n for xx in x]))
-        not_picked = [self.replaceSegName(inp[0][ii]) for ii in range(len(inp[0])-1) if inp[0][ii] not in perm_vars]
+#         not_picked = [self.replaceSegName(inp[0][ii]) for ii in range(len(inp[0])-1) if inp[0][ii] not in perm_vars]
+        not_picked = [self.replaceSegName(inp[0][ii]).replace("(n_", "(NOT ").replace(" n_", " NOT ") for ii in range(len(inp[0])-1) if inp[0][ii] not in perm_vars]
 
         print("")
         print("Unsolved variables - " + str(len(not_picked)) + "/" + str(len(inp[0])-1))
