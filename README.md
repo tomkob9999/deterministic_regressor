@@ -25,13 +25,13 @@ A sample test has been done for sklearn.datasets.load_breast_cancer dataset (htt
 
 Derived Expression:
 
-((worst_perimeter <= 100.4) | (worst_radius <= 14.92)) | ((0.1535 < concavity_error | worst_concave_points <= 0.07262 | 0.07262 < worst_concave_points <= 0.1453) & (mean_concave_points <= 0.04951 | mean_texture <= 17.08 | worst_perimeter <= 100.4) & (mean_concave_points <= 0.04951 | mean_texture <= 17.08 | worst_radius <= 14.92) & (mean_concave_points <= 0.04951 | worst_perimeter <= 100.4 | worst_texture <= 21.4) & (mean_concave_points <= 0.04951 | worst_radius <= 14.92 | worst_texture <= 21.4) & (worst_concave_points <= 0.07262 | 0.07262 < worst_concave_points <= 0.1453 | 0.9387 < worst_concavity))
+((NOT 0.1453 < worst_concave_points <= 0.2173 & NOT 0.2173 < worst_concave_points)) & ((mean_concave_points <= 0.04951 | worst_radius <= 14.92))
 
 Stats:
-- Precision: 93.88%
-- Recall: 98.88%
-- F1 Score: 96.32%
-- Effectiveness & Efficiency Score: 94.680% (original metric used in optimize_params())
+- Precision: 94.93%
+- Recall: 94.40%
+- F1 Score: 94.66%
+- Effectiveness & Efficiency Score: 94.430% (original metric used in optimize_params())
 
 TO-DO-FUTURE:
 - n/a
