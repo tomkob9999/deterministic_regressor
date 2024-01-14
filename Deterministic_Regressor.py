@@ -478,6 +478,7 @@ class Deterministic_Regressor:
         self.tokens = copy.deepcopy(inp[0])
         print("")
         
+        print("Redundant Pairs:")
         numrows = len(inp)-1
         redundant_cols = set()
         for i in range(len(inp[0])-1):
@@ -489,11 +490,11 @@ class Deterministic_Regressor:
 #                     print("sames", sames)
 #                     print("i", i)
 #                     print("j", j)
-#                     print("redundant", self.tokens[i])
-#                     print("redundant", self.tokens[j])
+#                     print(self.tokens[j].replace("(n_", "(NOT ").replace(" n_", " NOT "), "->",self.tokens[i].replace("(n_", "(NOT ").replace(" n_", " NOT "))
+                    print(self.tokens[j], "->",self.tokens[i])
                     redundant_cols.add(j)
-        print("Redundant Columns:")
-        print([self.replaceSegName(self.tokens[r]).replace("(n_", "(NOT ").replace(" n_", " NOT ") for r in sorted(redundant_cols)])
+#         print("Redundant Columns:")
+#         print([self.replaceSegName(self.tokens[r]).replace("(n_", "(NOT ").replace(" n_", " NOT ") for r in sorted(redundant_cols)])
         print("")
         
         if max_dnf_len > numvars - 1:
@@ -823,6 +824,7 @@ class Deterministic_Regressor:
                 print("#################################")
                 print("")
                 return win_option_sofar, ct_opt
+
 
 
 
