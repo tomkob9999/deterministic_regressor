@@ -31,7 +31,7 @@ Stats:
 - Precision: 93.88%
 - Recall: 98.88%
 - F1 Score: 96.32%
-Effectiveness & Efficiency Score: 94.680% (original metric used in optimize_params())
+- Effectiveness & Efficiency Score: 94.680% (original metric used in optimize_params())
 
 TO-DO-FUTURE:
 - n/a
