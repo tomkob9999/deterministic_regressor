@@ -1,6 +1,6 @@
 # Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 2.6.6
+# Version: 2.6.7
 # Date: 2024/01/14
 
 import itertools
@@ -26,6 +26,8 @@ class Deterministic_Regressor:
         self.dic_segments = {}
         
         self.last_solve_expression = ""
+        
+#         self.check_negative=False
 
     def remove_supersets(sets_list):
         result = []
@@ -235,6 +237,10 @@ class Deterministic_Regressor:
 
 
         print("Solver Expression:")
+        
+#         if not self.check_negative:
+#             print(self.replaceSegName(expr))
+#         else:
         print(self.replaceSegName(expr).replace("(n_", "(NOT ").replace(" n_", " NOT "))
         
         self.last_solve_expression = expr
@@ -278,7 +284,7 @@ class Deterministic_Regressor:
             print(min_max_per_group)
         return df
 
-    def discretize_data(self, data_list, by_four=1, silent=False):
+    def discretize_data(self, data_list, by_two=2, silent=False):
 
         result_header = data_list[0][-1]
         result_values = [d[-1] for d in data_list[1:]]
@@ -292,7 +298,7 @@ class Deterministic_Regressor:
         for c in cols:
             countNonBool = len(data[c]) - (data[c] == 0).sum() - (data[c] == 1).sum()
             if countNonBool > 0 and pd.api.types.is_numeric_dtype(data[c]):
-                result_df = self.generate_segment_ranks(data, by_four*4, c, silent=silent)
+                result_df = self.generate_segment_ranks(data, by_two*2, c, silent=silent)
                 one_hot_df = pd.get_dummies(result_df[c + '_rank'], prefix=c)
                 one_hot_df = one_hot_df.astype(int)
                 data = pd.concat([result_df, one_hot_df], axis=1)
@@ -419,7 +425,7 @@ class Deterministic_Regressor:
         return imp_before_row_reduction
     
     
-    def train(self, file_path=None, data_list=None, max_dnf_len=4, check_false=True, check_negative=False, error_tolerance=0.02, by_four=1, min_match=3, use_approx_dnf=False):
+    def train(self, file_path=None, data_list=None, max_dnf_len=4, check_false=True, check_negative=False, error_tolerance=0.02, by_two=2, min_match=3, use_approx_dnf=False):
 
 # file_path: input file in tab-delimited text
 # check_negative: enable to check the negative conditions or not.  This one is very heavy.
@@ -444,7 +450,7 @@ class Deterministic_Regressor:
         inp = [[Deterministic_Regressor.try_convert_to_numeric(inp[i][j]) for j in range(len(inp[i]))] for i in range(len(inp))]
         
         print("Discretizing...")
-        inp = self.discretize_data(inp, by_four)
+        inp = self.discretize_data(inp, by_two)
         print("")
         
         imp_before_row_reduction = copy.deepcopy(inp)
@@ -455,6 +461,7 @@ class Deterministic_Regressor:
 #         print("NUM RECS AFTER REDUCTION FOR TEST", len(inp))
 # # ############## COMMENT OUT UNLESS TESTING ############## 
 
+#         self.check_negative = check_negative
         
         numvars = len(inp[1])-1
         
@@ -623,8 +630,8 @@ class Deterministic_Regressor:
                             
                         raw_perf_n.append([ii for ii in p_list[i]])
                         raw_perf2_n.append(b)  
-#                         self.false_confidence["(" + " | ".join(sorted(list(set([inp[0][ii] for ii in p_list[i]])))) + ")"] = cnt_all - cnt_unmatch
-                        self.false_confidence["(" + " | ".join(sorted(list(set(["n_" + inp[0][ii] if inp[0][ii][:2] != "n_"  else "n_" + inp[0][ii] for ii in p_list[i]])))) + ")"] = cnt_all - cnt_unmatch
+                        self.false_confidence["(" + " | ".join(sorted(list(set([inp[0][ii] for ii in p_list[i]])))) + ")"] = cnt_all - cnt_unmatch
+#                         self.false_confidence["(" + " | ".join(sorted(list(set(["n_" + inp[0][ii] if inp[0][ii][:2] != "n_"  else "n_" + inp[0][ii] for ii in p_list[i]])))) + ")"] = cnt_all - cnt_unmatch
         
         for dn in raw_perf_n:
             dnf_perf_n.append(sorted(list(set([inp[0][ii] for ii in dn]))))
@@ -661,25 +668,32 @@ class Deterministic_Regressor:
             
             
         print("")
-        print("DNF TRUE - " + str(len(set_dnf_true)))
+        print("TRUE DNF - " + str(len(set_dnf_true)))
         print("--------------------------------")
 
         if len(set_dnf_true) > 0:
-#             print(self.replaceSegName(self.expression_true))
+#             if not self.check_negative:
+#                 print(self.replaceSegName(self.expression_true))
+#             else:
             print(self.replaceSegName(self.expression_true).replace("(n_", "(NOT ").replace(" n_", " NOT "))
             
 
         if check_false:
             print("")
-            print("CNF FALSE - " + str(len(set_cnf_false)))
+            print("FALSE CNF - " + str(len(set_cnf_false)))
             print("--------------------------------")
             if len(set_cnf_false) > 0:
-#                 print(self.replaceSegName(self.expression_false))
+#                 if not self.check_negative:
+#                     print(self.replaceSegName(self.expression_false))
+#                 else:
                 print(self.replaceSegName(self.expression_false).replace("(n_", "(NOT ").replace(" n_", " NOT "))
             
         perm_vars = list(set([xx for x in dnf_perf for xx in x] + [xx for x in dnf_perf_n for xx in x]))
-#         not_picked = [self.replaceSegName(inp[0][ii]) for ii in range(len(inp[0])-1) if inp[0][ii] not in perm_vars]
-        not_picked = [self.replaceSegName(inp[0][ii]).replace("(n_", "(NOT ").replace(" n_", " NOT ") for ii in range(len(inp[0])-1) if inp[0][ii] not in perm_vars]
+        
+#         if not self.check_negative:
+#             not_picked = [self.replaceSegName(inp[0][ii]) for ii in range(len(inp[0])-1) if inp[0][ii] not in perm_vars]
+#         else:
+        not_picked = [self.replaceSegName(inp[0][ii]) if self.replaceSegName(inp[0][ii])[:2] != "n_" else "NOT " + self.replaceSegName(inp[0][ii])[2:] for ii in range(len(inp[0])-1) if inp[0][ii] not in perm_vars]
 
         print("")
         print("Unsolved variables - " + str(len(not_picked)) + "/" + str(len(inp[0])-1))
@@ -772,12 +786,14 @@ class Deterministic_Regressor:
                 print(f"F1 Score: {opt_f1_sofar * 100:.2f}%")
                 print(f"Effectiveness & Efficiency Score: {best_ee_sofar * 100:.3f}%")
                 print("Expression:")
+#                 if not self.check_negative:
+#                     print(self.replaceSegName(expr_opt))
+#                 else:
                 print(self.replaceSegName(expr_opt).replace("(n_", "(NOT ").replace(" n_", " NOT "))
                 print("")
                 print("#################################")
                 print("")
                 return win_option_sofar, ct_opt
-
 
 
 
