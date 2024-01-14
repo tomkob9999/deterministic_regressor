@@ -1,6 +1,6 @@
 # Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 2.6.2
+# Version: 2.6.3
 # Date: 2024/01/14
 
 import itertools
@@ -26,52 +26,13 @@ class Deterministic_Regressor:
         self.dic_segments = {}
         
         self.last_solve_expression = ""
-        
-#     def cnf_to_dnf(cnf):
-#         dnf_clauses = []
 
-#         for clause in cnf:
-#             dnf_clause = []
-#             for literal in clause:
-#                 if isinstance(literal, tuple):  # Handle negation
-#                     dnf_clause.append((literal[0], not literal[1]))
-#                 else:
-#                     dnf_clause.append(literal)
-#             dnf_clauses.append(dnf_clause)
-
-#         dnf_result = []
-#         if len(dnf_clauses) > 0:
-#             for i in range(len(dnf_clauses[0])):
-#                 dnf_result.append(sorted(list(set([dnf_clauses[j][i] for j in range(len(dnf_clauses))]))))
-
-#         return dnf_result
-    
     def remove_supersets(sets_list):
         result = []
         for s in sets_list:
             if not any(s != existing_set and s.issuperset(existing_set) for existing_set in sets_list):
                 result.append(s)
         return result
-
-#     def cnf_to_dnfx(cnf):
-#         dnf = []
-#         for clause in cnf:
-#             dnf_clause = []
-#             for literal in clause:
-# #                 dnf_clause.append([literal])
-#                 dnf_clause.append(literal)
-#             dnf.append(dnf_clause)
-#     #     return [list(x) for x in itertools.product(*dnf)]
-#         dnfl = [list(x) for x in itertools.product(*dnf)]
-# #         dnfl = [["".join(dd) for dd in d] for d in dnfl]
-#         dnfl = [set(d) for d in dnfl]
-#         filtered_sets = Deterministic_Regressor.remove_supersets(dnfl)
-#         filtered_lists = [sorted(list(f)) for f in sorted(filtered_sets)]
-# #         filtered_lists = [" & ".join(f) for f in sorted(filtered_lists)]
-# #         str = "(" + ") | (".join(filtered_lists) + ")"
-# #     #     print("str", str)
-# #         return str
-#         return filtered_lists
 
 
     def cnf_to_dnf_str(str):
@@ -155,23 +116,23 @@ class Deterministic_Regressor:
             if power_level > max_power or power_level < 0:
                 print("power_level must be between 0 and 32")
                 return
-            
+
             max_freq = max([v for k, v in self.true_confidence.items()])
             min_freq = min([v for k, v in self.true_confidence.items()])
-            power_level = int(power_level/max_power * (max_freq-min_freq) + 0.9999999999)
+            this_power = int(power_level/max_power * (max_freq-min_freq) + 0.9999999999)
             
-            if max_freq - power_level < 0:
+            if max_freq - this_power < 0:
                 true_confidence_thresh = 0
             else:
-                true_confidence_thresh = max_freq - power_level
+                true_confidence_thresh = max_freq - this_power
                 
             max_freq = max([v for k, v in self.false_confidence.items()])
-            min_freq = min([v for k, v in self.true_confidence.items()])
-            power_level = int(power_level/max_power * (max_freq-min_freq) + 0.9999999999)
-            if max_freq - power_level < 0:
+            min_freq = min([v for k, v in self.false_confidence.items()])
+            this_power = int(power_level/max_power * (max_freq-min_freq) + 0.9999999999)
+            if max_freq - this_power < 0:
                 false_confidence_thresh = 0
             else:
-                false_confidence_thresh = max_freq - power_level
+                false_confidence_thresh = max_freq - this_power
             
         else:
             true_confidence_thresh = confidence_thresh
@@ -273,117 +234,6 @@ class Deterministic_Regressor:
         return res
     
     
-#     def solve(self, inp_p, check_negative=True, use_expression="union", confidence_thresh=3, power_level=None):
-#         inp = [[Deterministic_Regressor.try_convert_to_numeric(inp_p[i][j]) for j in range(len(inp_p[i]))] for i in range(len(inp_p))]
-        
-#         if power_level is not None:
-#             max_freq = 0
-#             if use_expression == "union" or use_expression == "common": 
-#                 max_freq = min(max([v for k, v in self.true_confidence.items()]), max([v for k, v in self.false_confidence.items()]))
-#             elif use_expression == "true":
-#                 max_freq = max([v for k, v in self.true_confidence.items()])
-#             else:
-#                 max_freq = max([v for k, v in self.false_confidence.items()])
-            
-#             if max_freq - power_level < 0:
-#                 confidence_thresh = 0
-#             else:
-#                 confidence_thresh = max_freq - power_level
-# #         print("confidence_thresh:", confidence_thresh)
-                
-#         print("Input Records:", len(inp)-1)
-        
-#         numvars = len(inp[0])
-
-#         if check_negative:
-#             for i in range(numvars):
-#                 inp[0].insert(i+numvars, "n_" + inp[0][i])
-#             for j in range(1, len(inp), 1):
-#                 for i in range(numvars):
-#                     inp[j].insert(i+numvars,0 if inp[j][i] == 1 else 1)
-#             numvars *= 2
-
-#         tokens = inp[0]
-#         inp_list = [row for row in inp[1:]]
-        
-#         res = list(range(len(inp_list)))
-#         expr = ""
-        
-#         true_exp = self.expression_true
-#         false_exp = self.expression_false
-#         active_true_clauses = 0
-#         active_false_clauses = 0
-#         if confidence_thresh > 0:
-#             true_list = []
-#             for s in true_exp.split("|"):
-#                 s = s.strip()
-#                 if s in self.true_confidence:
-#                     if self.true_confidence[s] >= confidence_thresh:
-#                         true_list.append(s)
-#                         active_true_clauses += 1
-#                 else:
-#                     true_list.append(s)
-#                     active_true_clauses += 1
-#             true_exp = " | ".join(true_list)
-            
-#             false_list = []
-#             for s in false_exp.split("&"):
-#                 s = s.strip()
-#                 if s in self.false_confidence:
-#                     if self.false_confidence[s] >= confidence_thresh:
-#                         false_list.append(s)
-#                         active_false_clauses += 1
-#                 else:
-#                     false_list.append(s)
-#                     active_false_clauses += 1
-#             false_exp = " & ".join(false_list)
-#         else:
-#             active_true_clauses = len(true_exp.split("|"))
-#             active_false_clauses = len(false_exp.split("&"))
-            
-#         if use_expression == "true":
-#             if true_exp == "":
-#                 print("The true expression is not available")
-#                 return []
-#             expr = true_exp
-#             print(str(active_true_clauses) + " true clauses activated")
-#         elif use_expression == "false":
-#             if false_exp == "":
-#                 print("The false expression is not available")
-#                 return []
-#             expr = false_exp
-#             print(str(active_false_clauses) + " false clauses activated")
-#         elif use_expression == "common":
-#             if true_exp == "":
-#                 print("The true expression is not available")
-#                 return []
-#             if false_exp == "":
-#                 print("The false expression is not available")
-#                 return []
-#             expr = "(" + true_exp + ") & (" + false_exp + ")"
-#             print(str(active_true_clauses) + " true clauses activated")
-#             print(str(active_false_clauses) + " false clauses activated")
-#         else: # union case
-#             if true_exp == "":
-#                 print("The true expression is not available")
-#                 return []
-#             if false_exp == "":
-#                 print("The false expression is not available")
-#                 return []
-#             expr = "(" + true_exp + ") | (" + false_exp + ")"
-#             print(str(active_true_clauses) + " true clauses activated")
-#             print(str(active_false_clauses) + " false clauses activated")
-
-
-#         print("Solver Expression:")
-#         print(self.replaceSegName(expr))
-        
-#         self.last_solve_expression = expr
-        
-#         for i in range(len(inp_list)):
-#             res[i] = Deterministic_Regressor.myeval(inp_list[i], tokens, expr)
-#         return res
-
     
     def replaceSegName(self, str):
         s = str
@@ -490,12 +340,12 @@ class Deterministic_Regressor:
         print("")
         
         imp_before_row_reduction = copy.deepcopy(inp)
-# # # ############## COMMENT OUT UNLESS TESTING ############## 
-        CUT_PCT = 60
-        print("NUM RECS BEFORE REDUCTION FOR TEST", len(inp))
-        inp = Deterministic_Regressor.reduce_rows_except_first(inp, CUT_PCT)
-        print("NUM RECS AFTER REDUCTION FOR TEST", len(inp))
-# # # ############## COMMENT OUT UNLESS TESTING ############## 
+# # # # ############## COMMENT OUT UNLESS TESTING ############## 
+#         CUT_PCT = 60
+#         print("NUM RECS BEFORE REDUCTION FOR TEST", len(inp))
+#         inp = Deterministic_Regressor.reduce_rows_except_first(inp, CUT_PCT)
+#         print("NUM RECS AFTER REDUCTION FOR TEST", len(inp))
+# # # # ############## COMMENT OUT UNLESS TESTING ############## 
 
         
         numvars = len(inp[1])-1
@@ -842,6 +692,8 @@ class Deterministic_Regressor:
         if len(used_options) > 0:
             ops = used_options
         
+        
+        doexit = False
         for i in range(100):
             print("")
             print("")
@@ -883,7 +735,15 @@ class Deterministic_Regressor:
                 opt_precision_sofar = opt_precision
                 opt_recall_sofar = opt_recall
                 opt_f1_sofar = opt_f1
+                if ct_now > 64:
+                    doexit = True
             elif jump == 1:
+                doexit = True
+            else:
+                jump = int(jump/2)
+                ct_now = ct_now - jump
+                
+            if doexit:
                 print("")
                 print("#################################")
                 print("")
@@ -899,9 +759,6 @@ class Deterministic_Regressor:
                 print("#################################")
                 print("")
                 break
-            else:
-                jump = int(jump/2)
-                ct_now = ct_now - jump
 
 
 
