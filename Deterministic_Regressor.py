@@ -1,6 +1,6 @@
 # Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 2.7.0
+# Version: 2.7.1
 # Date: 2024/01/15
 
 import itertools
@@ -867,39 +867,67 @@ class Deterministic_Regressor:
 
         inp = test_data
         
+#         print("Columns:", inp[0])
+        
+        print("false CNF analysis started")
         false_clauses = sorted([(v, k) for k, v in self.false_confidence.items()])
         
         expr = ""
         false_recall = {}
-        
-        res = self.solve_direct(inp, false_clauses[0][1])
-        conf_matrix = confusion_matrix(answer, res)
-        tn, fp, fn, tp = conf_matrix.ravel()
-        min_fp = fp
-        min_fn = fn
-        
-        false_best_expr = false_clauses[0][1]
-        
-        for i in range(1, len(false_clauses), 1):
-            expr = false_best_expr + " & " + false_clauses[i][1]
-            res = self.solve_direct(inp, false_clauses[i][1])
+        false_best_expr = ""
+        min_fp = 9999999
+        min_fn = 9999999
+            
+        if len(false_clauses) > 0:
+#             print("optimize_max 1")
+
+            res = self.solve_direct(inp, false_clauses[0][1])
+
+#             print("optimize_max 2")
+
             conf_matrix = confusion_matrix(answer, res)
             tn, fp, fn, tp = conf_matrix.ravel()
-            if min_fp > fp and (min_false_negative_ratio > fn/len(answer)):
-                min_fp = fp
-                min_fn = fn
-                false_best_expr = expr
+            min_fp = fp
+            min_fn = fn
 
-        false_best_expr = "(" + false_best_expr + ")"
+            false_best_expr = false_clauses[0][1]
+
+            for i in range(1, len(false_clauses), 1):
+                if i % 50 == 0:
+                    print(str(i) + "/" + str(len(false_clauses)) + " completed" )
+
+                expr = false_best_expr + " & " + false_clauses[i][1]
+#                 print("self.solve_direct before")
+                res = self.solve_direct(inp, false_clauses[i][1])
+#                 print("self.solve_direct after")
+                conf_matrix = confusion_matrix(answer, res)
+                tn, fp, fn, tp = conf_matrix.ravel()
+                if min_fp > fp and (min_false_negative_ratio > fn/len(answer)):
+                    min_fp = fp
+                    min_fn = fn
+                    false_best_expr = expr
+
+            false_best_expr = "(" + false_best_expr + ")"
         
+        print("true DNF analysis started")
         true_clauses = sorted([(v, k) for k, v in self.true_confidence.items()])
         true_best_expr = ""
         for i in range(1, len(true_clauses), 1):
+#             print("i", i)
+            if i % 50 == 0:
+                print(str(i) + "/" + str(len(true_clauses)) + " completed" )
+            
             if true_best_expr == "":
-                expr = false_best_expr + " | (" + true_clauses[i][1] + ")"
+                if false_best_expr == "":
+                    expr = "(" + true_clauses[i][1] + ")"
+                else:
+                    expr = false_best_expr + " | (" + true_clauses[i][1] + ")"
             else:
-                expr = false_best_expr + " | (" + true_best_expr + " | " + true_clauses[i][1] + ")"
-                
+                if false_best_expr == "":
+                    expr = "(" + true_best_expr + " | " + true_clauses[i][1] + ")"
+                else:
+                    expr = false_best_expr + " | (" + true_best_expr + " | " + true_clauses[i][1] + ")"
+            
             res = self.solve_direct(inp, expr)
             conf_matrix = confusion_matrix(answer, res)
             tn, fp, fn, tp = conf_matrix.ravel()
@@ -944,7 +972,6 @@ class Deterministic_Regressor:
                 self.expression_opt = final_expr
                 
                 return final_expr
-
 
 
 
