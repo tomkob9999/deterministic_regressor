@@ -1,6 +1,6 @@
 # Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 2.7.1
+# Version: 2.7.2
 # Date: 2024/01/15
 
 import itertools
@@ -862,8 +862,7 @@ class Deterministic_Regressor:
                 print("")
                 return win_option_sofar, ct_opt
 
-
-    def optimize_max(self, test_data, answer, min_false_negative_ratio=0.10):
+    def optimize_max(self, test_data, answer):
 
         inp = test_data
         
@@ -902,7 +901,8 @@ class Deterministic_Regressor:
 #                 print("self.solve_direct after")
                 conf_matrix = confusion_matrix(answer, res)
                 tn, fp, fn, tp = conf_matrix.ravel()
-                if min_fp > fp and (min_false_negative_ratio > fn/len(answer)):
+#                 if min_fp > fp and (min_false_negative_ratio > fn/len(answer)):
+                if min_fp + min_fn > fp + fn:
                     min_fp = fp
                     min_fn = fn
                     false_best_expr = expr
@@ -972,6 +972,8 @@ class Deterministic_Regressor:
                 self.expression_opt = final_expr
                 
                 return final_expr
+
+
 
 
 ###### Load the breast cancer dataset ###### 
