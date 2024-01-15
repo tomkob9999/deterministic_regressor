@@ -1,6 +1,6 @@
 # Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 2.6.9
+# Version: 2.7.0
 # Date: 2024/01/15
 
 import itertools
@@ -8,6 +8,7 @@ from sympy.logic import boolalg
 import numpy as np
 
 import sklearn.datasets
+from sklearn.metrics import precision_score, recall_score, f1_score, confusion_matrix
 import pandas as pd
 import random
 from sympy import simplify
@@ -27,7 +28,9 @@ class Deterministic_Regressor:
         
         self.last_solve_expression = ""
         
-#         self.check_negative=False
+        self.check_negative=False
+        
+        self.expression_opt = ""
 
     def remove_supersets(sets_list):
         result = []
@@ -106,7 +109,8 @@ class Deterministic_Regressor:
         return eval(______s____)
             
         
-    def solve(self, inp_p, check_negative=True, use_expression="union", confidence_thresh=3, power_level=None):
+#     def solve(self, inp_p, check_negative=True, use_expression="union", confidence_thresh=3, power_level=None):
+    def solve(self, inp_p, use_expression="union", confidence_thresh=3, power_level=None):
         
         inp = [[Deterministic_Regressor.try_convert_to_numeric(inp_p[i][j]) for j in range(len(inp_p[i]))] for i in range(len(inp_p))]
         
@@ -150,7 +154,7 @@ class Deterministic_Regressor:
         
         numvars = len(inp[0])
 
-        if check_negative:
+        if self.check_negative:
             for i in range(numvars):
                 inp[0].insert(i+numvars, "n_" + inp[0][i])
             for j in range(1, len(inp), 1):
@@ -249,7 +253,40 @@ class Deterministic_Regressor:
             res[i] = Deterministic_Regressor.myeval(inp_list[i], tokens, expr)
         return res
     
+        
+    def solve_direct(self, inp_p, expression):
+        
+        self.last_solve_expression = expression
+        
+                
+        numvars = len(inp[0])
+
+        if self.check_negative:
+            for i in range(numvars):
+                inp[0].insert(i+numvars, "n_" + inp[0][i])
+            for j in range(1, len(inp), 1):
+                for i in range(numvars):
+                    inp[j].insert(i+numvars,0 if inp[j][i] == 1 else 1)
+            numvars *= 2
+
+        tokens = inp[0]
+        inp_list = [row for row in inp[1:]]
+        
+        res = list(range(len(inp_list)))
+        
+#         tokens = inp[0]
+#         print("tokens", tokens)
+#         inp_list = [row for row in inp[1:]]
+#         res = list(range(len(inp_list)))
+        
+        
+        for i in range(len(inp_list)):
+            res[i] = Deterministic_Regressor.myeval(inp_list[i], tokens, expression)
+        return res
     
+            
+    def solve_with_opt(self, inp_p):
+        return self.solve_direct(inp_p, self.expression_opt)
     
     def replaceSegName(self, str):
         s = str
@@ -454,14 +491,14 @@ class Deterministic_Regressor:
         print("")
         
         imp_before_row_reduction = copy.deepcopy(inp)
-# # # ############## COMMENT OUT UNLESS TESTING ############## 
-#         CUT_PCT = 80
-#         print("NUM RECS BEFORE REDUCTION FOR TEST", len(inp))
-#         inp = Deterministic_Regressor.reduce_rows_except_first(inp, CUT_PCT)
-#         print("NUM RECS AFTER REDUCTION FOR TEST", len(inp))
 # # ############## COMMENT OUT UNLESS TESTING ############## 
+        CUT_PCT = 80
+        print("NUM RECS BEFORE REDUCTION FOR TEST", len(inp))
+        inp = Deterministic_Regressor.reduce_rows_except_first(inp, CUT_PCT)
+        print("NUM RECS AFTER REDUCTION FOR TEST", len(inp))
+# ############## COMMENT OUT UNLESS TESTING ############## 
 
-#         self.check_negative = check_negative
+        self.check_negative = check_negative
         
         numvars = len(inp[1])-1
         
@@ -826,30 +863,89 @@ class Deterministic_Regressor:
                 return win_option_sofar, ct_opt
 
 
+    def optimize_max(self, test_data, answer, min_false_negative_ratio=0.10):
+
+        inp = test_data
+        
+        false_clauses = sorted([(v, k) for k, v in self.false_confidence.items()])
+        
+        expr = ""
+        false_recall = {}
+        
+        res = self.solve_direct(inp, false_clauses[0][1])
+        conf_matrix = confusion_matrix(answer, res)
+        tn, fp, fn, tp = conf_matrix.ravel()
+        min_fp = fp
+        min_fn = fn
+        
+        false_best_expr = false_clauses[0][1]
+        
+        for i in range(1, len(false_clauses), 1):
+            expr = false_best_expr + " & " + false_clauses[i][1]
+            res = self.solve_direct(inp, false_clauses[i][1])
+            conf_matrix = confusion_matrix(answer, res)
+            tn, fp, fn, tp = conf_matrix.ravel()
+            if min_fp > fp and (min_false_negative_ratio > fn/len(answer)):
+                min_fp = fp
+                min_fn = fn
+                false_best_expr = expr
+
+        false_best_expr = "(" + false_best_expr + ")"
+        
+        true_clauses = sorted([(v, k) for k, v in self.true_confidence.items()])
+        true_best_expr = ""
+        for i in range(1, len(true_clauses), 1):
+            if true_best_expr == "":
+                expr = false_best_expr + " | (" + true_clauses[i][1] + ")"
+            else:
+                expr = false_best_expr + " | (" + true_best_expr + " | " + true_clauses[i][1] + ")"
+                
+            res = self.solve_direct(inp, expr)
+            conf_matrix = confusion_matrix(answer, res)
+            tn, fp, fn, tp = conf_matrix.ravel()
+            if min_fp + min_fn > fp + fn:
+                min_fp = fp
+                min_fn = fn
+                if true_best_expr == "":
+                    true_best_expr = true_clauses[i][1]
+                else:
+                    true_best_expr = true_best_expr + " | " + true_clauses[i][1]
+
+        final_expr = ""
+        if true_best_expr == "" and false_best_expr == "":
+            final_expr = ""
+        if true_best_expr != "" and false_best_expr == "":
+            final_expr = true_best_expr
+        if true_best_expr == "" and false_best_expr != "":
+            final_expr = false_best_expr
+        if true_best_expr != "" and false_best_expr != "":
+#             final_expr = "(" + false_best_expr + ") | (" + true_best_expr + ")"
+            final_expr = false_best_expr + " | (" + true_best_expr + ")"
+
+        if final_expr != "":
+            
+            res = self.solve_direct(inp, final_expr)
+
+            if len(res) > 0:
+                print("")
+                print("#### BEST EXPRESSION FOUND ####")
+                print("")
+                precision = precision_score(answer, res)
+                recall = recall_score(answer, res)
+                f1 = f1_score(answer, res)
+                print(f"Precision: {precision * 100:.2f}%")
+                print(f"Recall: {recall * 100:.2f}%")
+                print(f"F1 Score: {f1 * 100:.2f}%")
+                
+                print("")
+                
+                print(self.replaceSegName(final_expr).replace("(n_", "(NOT ").replace(" n_", " NOT "))
+                
+                self.expression_opt = final_expr
+                
+                return final_expr
 
 
-
-
-##### SAMPLE EXECUTION #########
-
-
-import copy
-from sklearn.metrics import precision_score, recall_score, f1_score
-from sklearn.datasets import load_breast_cancer
-from sklearn.model_selection import train_test_split
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.metrics import accuracy_score, classification_report
-import time
-
-def measure(start_time):
-    end_time = time.time()
-
-    elapsed_time = end_time - start_time
-    minutes, seconds = divmod(elapsed_time, 60)
-    milliseconds = int(elapsed_time * 1000 % 1000)
-    return f"{int(minutes)}:{str(int(seconds)).zfill(2)}:{str(int(milliseconds)).zfill(3)}"
-           
-start_time = time.time()
 
 
 ###### Load the breast cancer dataset ###### 
