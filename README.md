@@ -36,10 +36,7 @@ Stats:
 
 In addition, optimize_max() has been added.  It tries to find the best combinations of TRUE DNF and FALSE CNF clauses and ignores the expression size.  The DNF and CNF causes the behavior opposite.  The more DNF clauses than true results will increase while the more CNF clauses false results increase.  They seem to compensate each other.  Here is the sample result of above dataset with less train data of 113 out of 559.  It seems 100 records is almost sufficent to derive good expressions regardless of the size of variables as it pinpoints from smallest combinations of variables, though the number of variables increase the train runtime exponentially.   Please note I did this againt the test data, so for better knowing of its performance, it should be done against the validataion or train data instead of test data as finding the most effective sets of clauses is more than just hyperparameterization.
 
-
-![aa8](https://github.com/tomkob9999/deterministic_regressor/assets/96751911/690d4535-0f2e-42cb-8fda-e71f3b78b2e9)
-
-
+![aa9](https://github.com/tomkob9999/deterministic_regressor/assets/96751911/7ebf44b4-a214-42dd-9727-5e2a9234235c)
 
 
 
