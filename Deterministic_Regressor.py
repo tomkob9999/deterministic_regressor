@@ -1,6 +1,6 @@
 # Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 2.7.3
+# Version: 2.7.4
 # Date: 2024/01/15
 
 import itertools
@@ -491,12 +491,12 @@ class Deterministic_Regressor:
         print("")
         
         imp_before_row_reduction = copy.deepcopy(inp)
+# # # ############## COMMENT OUT UNLESS TESTING ############## 
+#         CUT_PCT = 90
+#         print("NUM RECS BEFORE REDUCTION FOR TEST", len(inp))
+#         inp = Deterministic_Regressor.reduce_rows_except_first(inp, CUT_PCT)
+#         print("NUM RECS AFTER REDUCTION FOR TEST", len(inp))
 # # ############## COMMENT OUT UNLESS TESTING ############## 
-        CUT_PCT = 90
-        print("NUM RECS BEFORE REDUCTION FOR TEST", len(inp))
-        inp = Deterministic_Regressor.reduce_rows_except_first(inp, CUT_PCT)
-        print("NUM RECS AFTER REDUCTION FOR TEST", len(inp))
-# ############## COMMENT OUT UNLESS TESTING ############## 
 
         self.check_negative = check_negative
         
