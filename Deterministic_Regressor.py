@@ -1,6 +1,6 @@
 # Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 2.7.4
+# Version: 2.7.5
 # Date: 2024/01/15
 
 import itertools
@@ -9,6 +9,7 @@ import numpy as np
 
 import sklearn.datasets
 from sklearn.metrics import precision_score, recall_score, f1_score, confusion_matrix
+from sklearn.model_selection import train_test_split
 import pandas as pd
 import random
 from sympy import simplify
@@ -31,6 +32,7 @@ class Deterministic_Regressor:
         self.check_negative=False
         
         self.expression_opt = ""
+        self.by_two = -1
 
     def remove_supersets(sets_list):
         result = []
@@ -257,8 +259,11 @@ class Deterministic_Regressor:
     def solve_direct(self, inp_p, expression):
         
         self.last_solve_expression = expression
-        
-                
+           
+        inp = copy.deepcopy(inp_p)
+        inp = [[Deterministic_Regressor.try_convert_to_numeric(inp[i][j]) for j in range(len(inp[i]))] for i in range(len(inp))]
+        inp = self.discretize_data(inp, self.by_two, silent=True)
+
         numvars = len(inp[0])
 
         if self.check_negative:
@@ -370,7 +375,7 @@ class Deterministic_Regressor:
         return sampled_rows
 
     #     works only for toy data
-    def train_simple(self, file_path=None, data_list=None, max_dnf_len=4, by_four=1):
+    def train_simple(self, file_path=None, data_list=None, max_dnf_len=4, by_two=1):
 
         # Example usage:
         # file_path = '/kaggle/input/dnf-regression/dnf_regression.txt'
@@ -389,7 +394,7 @@ class Deterministic_Regressor:
         inp = [[Deterministic_Regressor.try_convert_to_numeric(inp[i][j]) for j in range(len(inp[i]))] for i in range(len(inp))]
         
         print("Discretizing...")
-        inp = self.discretize_data(inp, by_four)
+        inp = self.discretize_data(inp, by_two)
         print("")
         
         imp_before_row_reduction = copy.deepcopy(inp)
@@ -747,7 +752,7 @@ class Deterministic_Regressor:
         return imp_before_row_reduction
 
 
-    def optimize_params(self, test_data, answer, elements_count_penalty=1.0, used_options=[]):
+    def optimize_params(self, test_data, answer, elements_count_penalty=1.0, solve_method=["common"]):
 
         inp = test_data
         
@@ -763,9 +768,10 @@ class Deterministic_Regressor:
         opt_recall_sofar = 0
         opt_f1_sofar = 0
 
-        ops = ["union", "common", "true", "false"]
-        if len(used_options) > 0:
-            ops = used_options
+#         ops = ["union", "common", "true", "false"]
+#         if len(used_options) > 0:
+#             ops = used_options
+        ops = solve_method
         
         
         doexit = False
@@ -986,6 +992,52 @@ class Deterministic_Regressor:
                 self.expression_opt = final_expr
                 
                 return final_expr
+            
+    def random_split_matrix(matrix, divide_by=2):
+        rows = list(matrix)  # Convert to list for easier shuffling
+        random.shuffle(rows)  # Shuffle rows in-place
+        split_index = len(rows) // divide_by  # Integer division for equal or near-equal halves
+        return rows[:split_index], rows[split_index:]
+
+    def train_and_optimize(self, data_list=None, max_dnf_len=4, check_false=True, check_negative=False, error_tolerance=0.02, by_two=2, 
+                       min_match=3, use_approx_dnf=False, redundant_thresh=1.00, solve_method=["common", "union"], elements_count_penalty=1.0):
+        
+        print("training started")
+        
+        self.by_two = by_two
+        
+        headers = data_list[0]
+        data_list2 = data_list[1:]
+        
+#         train_data, valid_data = train_test_split(X=data_list2, test_size=0.5, random_state=42)
+        train_data, valid_data = Deterministic_Regressor.random_split_matrix(data_list2)
+
+        train_inp = [headers] + train_data
+        
+        self.train(data_list=train_inp, max_dnf_len=max_dnf_len, check_false=check_false, check_negative=check_negative, 
+                        error_tolerance=error_tolerance, by_two=by_two, min_match=min_match, use_approx_dnf=use_approx_dnf, redundant_thresh=redundant_thresh)
+
+        print("optimization started")
+        inp = [headers] + valid_data
+           
+        inp = [[Deterministic_Regressor.try_convert_to_numeric(inp[i][j]) for j in range(len(inp[i]))] for i in range(len(inp))]
+#         print("Discretizing...")
+        inp = self.discretize_data(inp, by_two)
+    
+        if check_negative:
+            for i in range(numvars):
+                inp[0].insert(i+numvars, "n_" + inp[0][i])
+            for j in range(1, len(inp), 1):
+                for i in range(numvars):
+                    inp[j].insert(i+numvars, 0 if inp[j][i] == 1 else 1)
+            numvars *= 2
+                
+        answer = [int(inp[i][-1]) for i in range(1, len(inp), 1)]
+        inp = [row[:-1] for row in inp]
+             
+            
+        return reg.optimize_params(inp, answer, solve_method=solve_method, elements_count_penalty=1.0)
+
 
 
 
