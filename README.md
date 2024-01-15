@@ -38,6 +38,9 @@ In addition, optimize_max() has been added.  It tries to find the best combinati
 
 ![aa9](https://github.com/tomkob9999/deterministic_regressor/assets/96751911/7ebf44b4-a214-42dd-9727-5e2a9234235c)
 
+It also has check_negative option.  When the option is on, the negative conditions are automatically generated, and the logical expressions will contain negative expressions.  Here is the result of the same 113 test data.  The optimize_max is too time consuming to handled the doubled data.  So, optimize_params was used, but the result is still strong, especially for the size of the expression.
+
+![aa10](https://github.com/tomkob9999/deterministic_regressor/assets/96751911/36af6f2c-4744-42d2-a6c4-67ceb1cdb442)
 
 
 TO-DO-FUTURE:
