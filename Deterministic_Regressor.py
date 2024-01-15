@@ -491,12 +491,12 @@ class Deterministic_Regressor:
         print("")
         
         imp_before_row_reduction = copy.deepcopy(inp)
+# # # ############## COMMENT OUT UNLESS TESTING ############## 
+#         CUT_PCT = 80
+#         print("NUM RECS BEFORE REDUCTION FOR TEST", len(inp))
+#         inp = Deterministic_Regressor.reduce_rows_except_first(inp, CUT_PCT)
+#         print("NUM RECS AFTER REDUCTION FOR TEST", len(inp))
 # # ############## COMMENT OUT UNLESS TESTING ############## 
-        CUT_PCT = 80
-        print("NUM RECS BEFORE REDUCTION FOR TEST", len(inp))
-        inp = Deterministic_Regressor.reduce_rows_except_first(inp, CUT_PCT)
-        print("NUM RECS AFTER REDUCTION FOR TEST", len(inp))
-# ############## COMMENT OUT UNLESS TESTING ############## 
 
         self.check_negative = check_negative
         
@@ -972,7 +972,6 @@ class Deterministic_Regressor:
                 self.expression_opt = final_expr
                 
                 return final_expr
-
 
 
 ###### Load the breast cancer dataset ###### 
