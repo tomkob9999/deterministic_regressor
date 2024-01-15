@@ -1,6 +1,6 @@
 # Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 2.7.2
+# Version: 2.7.3
 # Date: 2024/01/15
 
 import itertools
@@ -491,12 +491,12 @@ class Deterministic_Regressor:
         print("")
         
         imp_before_row_reduction = copy.deepcopy(inp)
-# # # ############## COMMENT OUT UNLESS TESTING ############## 
-#         CUT_PCT = 80
-#         print("NUM RECS BEFORE REDUCTION FOR TEST", len(inp))
-#         inp = Deterministic_Regressor.reduce_rows_except_first(inp, CUT_PCT)
-#         print("NUM RECS AFTER REDUCTION FOR TEST", len(inp))
 # # ############## COMMENT OUT UNLESS TESTING ############## 
+        CUT_PCT = 90
+        print("NUM RECS BEFORE REDUCTION FOR TEST", len(inp))
+        inp = Deterministic_Regressor.reduce_rows_except_first(inp, CUT_PCT)
+        print("NUM RECS AFTER REDUCTION FOR TEST", len(inp))
+# ############## COMMENT OUT UNLESS TESTING ############## 
 
         self.check_negative = check_negative
         
@@ -860,9 +860,12 @@ class Deterministic_Regressor:
                 print("")
                 print("#################################")
                 print("")
+                
+                self.expression_opt = expr_opt
+                
                 return win_option_sofar, ct_opt
 
-    def optimize_max(self, test_data, answer):
+    def optimize_max(self, test_data, answer, cnt_out=5):
 
         inp = test_data
         
@@ -876,12 +879,18 @@ class Deterministic_Regressor:
         false_best_expr = ""
         min_fp = 9999999
         min_fn = 9999999
-            
+        
+        best_ee = 0
         if len(false_clauses) > 0:
 #             print("optimize_max 1")
 
             res = self.solve_direct(inp, false_clauses[0][1])
-
+    
+            precision = precision_score(answer, res)
+            recall = recall_score(answer, res)
+            f1 = f1_score(answer, res)
+            best_ee = (f1 + min(precision,recall))/2
+                
 #             print("optimize_max 2")
 
             conf_matrix = confusion_matrix(answer, res)
@@ -890,9 +899,16 @@ class Deterministic_Regressor:
             min_fn = fn
 
             false_best_expr = false_clauses[0][1]
-
+            
+            cnt = 0
             for i in range(1, len(false_clauses), 1):
-                if i % 50 == 0:
+                cnt = cnt + 1
+#                 print("i", i)
+#                 print("cnt", cnt)
+                if cnt_out < cnt:
+                    break
+                    
+                if i % 10 == 0:
                     print(str(i) + "/" + str(len(false_clauses)) + " completed" )
 
                 expr = false_best_expr + " & " + false_clauses[i][1]
@@ -901,20 +917,27 @@ class Deterministic_Regressor:
 #                 print("self.solve_direct after")
                 conf_matrix = confusion_matrix(answer, res)
                 tn, fp, fn, tp = conf_matrix.ravel()
-#                 if min_fp > fp and (min_false_negative_ratio > fn/len(answer)):
-                if min_fp + min_fn > fp + fn:
+                if min_fp > fp and (0.15 > fn/len(answer)):
+#                 if min_fp + min_fn > fp + fn:
                     min_fp = fp
                     min_fn = fn
                     false_best_expr = expr
+                    cnt = 0
 
             false_best_expr = "(" + false_best_expr + ")"
         
         print("true DNF analysis started")
         true_clauses = sorted([(v, k) for k, v in self.true_confidence.items()])
         true_best_expr = ""
+        cnt = 0
         for i in range(1, len(true_clauses), 1):
+            cnt = cnt + 1
 #             print("i", i)
-            if i % 50 == 0:
+#             print("cnt", cnt)
+            if cnt_out < cnt:
+                break
+                    
+            if i % 10 == 0:
                 print(str(i) + "/" + str(len(true_clauses)) + " completed" )
             
             if true_best_expr == "":
@@ -929,15 +952,22 @@ class Deterministic_Regressor:
                     expr = false_best_expr + " | (" + true_best_expr + " | " + true_clauses[i][1] + ")"
             
             res = self.solve_direct(inp, expr)
-            conf_matrix = confusion_matrix(answer, res)
-            tn, fp, fn, tp = conf_matrix.ravel()
-            if min_fp + min_fn > fp + fn:
+#             conf_matrix = confusion_matrix(answer, res)
+#             tn, fp, fn, tp = conf_matrix.ravel()
+#             if min_fp + min_fn > fp + fn:
+            precision = precision_score(answer, res)
+            recall = recall_score(answer, res)
+            f1 = f1_score(answer, res)
+            ee = (f1 + min(precision,recall))/2
+            if best_ee < ee:
+                best_ee = ee
                 min_fp = fp
                 min_fn = fn
                 if true_best_expr == "":
                     true_best_expr = true_clauses[i][1]
                 else:
                     true_best_expr = true_best_expr + " | " + true_clauses[i][1]
+                cnt = 0
 
         final_expr = ""
         if true_best_expr == "" and false_best_expr == "":
@@ -952,6 +982,7 @@ class Deterministic_Regressor:
 
         if final_expr != "":
             
+            print("assessment of the optimal solution")
             res = self.solve_direct(inp, final_expr)
 
             if len(res) > 0:
