@@ -491,12 +491,12 @@ class Deterministic_Regressor:
         print("")
         
         imp_before_row_reduction = copy.deepcopy(inp)
+# # # ############## COMMENT OUT UNLESS TESTING ############## 
+#         CUT_PCT = 90
+#         print("NUM RECS BEFORE REDUCTION FOR TEST", len(inp))
+#         inp = Deterministic_Regressor.reduce_rows_except_first(inp, CUT_PCT)
+#         print("NUM RECS AFTER REDUCTION FOR TEST", len(inp))
 # # ############## COMMENT OUT UNLESS TESTING ############## 
-        CUT_PCT = 90
-        print("NUM RECS BEFORE REDUCTION FOR TEST", len(inp))
-        inp = Deterministic_Regressor.reduce_rows_except_first(inp, CUT_PCT)
-        print("NUM RECS AFTER REDUCTION FOR TEST", len(inp))
-# ############## COMMENT OUT UNLESS TESTING ############## 
 
         self.check_negative = check_negative
         
@@ -524,14 +524,8 @@ class Deterministic_Regressor:
                     break
                 sames = len([1 for k in range(1, len(inp), 1) if inp[k][i] == inp[k][j]])
                 if sames/numrows >= redundant_thresh:
-#                     print("sames", sames)
-#                     print("i", i)
-#                     print("j", j)
-#                     print(self.tokens[j].replace("(n_", "(NOT ").replace(" n_", " NOT "), "->",self.tokens[i].replace("(n_", "(NOT ").replace(" n_", " NOT "))
                     print(self.tokens[j], "->",self.tokens[i])
                     redundant_cols.add(j)
-#         print("Redundant Columns:")
-#         print([self.replaceSegName(self.tokens[r]).replace("(n_", "(NOT ").replace(" n_", " NOT ") for r in sorted(redundant_cols)])
         print("")
         
         if max_dnf_len > numvars - 1:
@@ -655,9 +649,7 @@ class Deterministic_Regressor:
                             
                         raw_perf_n.append([ii for ii in p_list[i]])
                         raw_perf2_n.append(b)       
-#                         self.false_confidence["(" + " | ".join(sorted(list(set([inp[0][ii] for ii in p_list[i]])))) + ")"] = cnt_all if cnt_unmatch == 0 else cnt_all/(cnt_unmatch+1)
                         self.false_confidence["(" + " | ".join(sorted(list(set([inp[0][ii][2:] if inp[0][ii][0:2] == "n_" else "n_" + inp[0][ii] for ii in p_list[i]])))) + ")"] = cnt_all - cnt_unmatch
-#                 print("raw_perf_n", raw_perf_n)
             else:
                 for s in range(max_dnf_len):
                     len_dnf = s + 1
@@ -695,8 +687,7 @@ class Deterministic_Regressor:
                         raw_perf_n.append([ii for ii in p_list[i]])
                         raw_perf2_n.append(b)  
                         self.false_confidence["(" + " | ".join(sorted(list(set([inp[0][ii] for ii in p_list[i]])))) + ")"] = cnt_all - cnt_unmatch
-#                         self.false_confidence["(" + " | ".join(sorted(list(set(["n_" + inp[0][ii] if inp[0][ii][:2] != "n_"  else "n_" + inp[0][ii] for ii in p_list[i]])))) + ")"] = cnt_all - cnt_unmatch
-        
+   
         for dn in raw_perf_n:
             dnf_perf_n.append(sorted(list(set([inp[0][ii] for ii in dn]))))
             
@@ -725,20 +716,13 @@ class Deterministic_Regressor:
         self.expression_true = Deterministic_Regressor.simplify_dnf(self.expression_true)
         self.expression_false = Deterministic_Regressor.simplify_dnf(cnf, use_cnf=True)
         
-        
-#         print("self.expression_true", self.expression_true)
-#         print("self.expression_false", self.expression_false)
 
-            
             
         print("")
         print("TRUE DNF - " + str(len(set_dnf_true)))
         print("--------------------------------")
 
         if len(set_dnf_true) > 0:
-#             if not self.check_negative:
-#                 print(self.replaceSegName(self.expression_true))
-#             else:
             print(self.replaceSegName(self.expression_true).replace("(n_", "(NOT ").replace(" n_", " NOT "))
             
 
@@ -747,16 +731,10 @@ class Deterministic_Regressor:
             print("FALSE CNF - " + str(len(set_cnf_false)))
             print("--------------------------------")
             if len(set_cnf_false) > 0:
-#                 if not self.check_negative:
-#                     print(self.replaceSegName(self.expression_false))
-#                 else:
                 print(self.replaceSegName(self.expression_false).replace("(n_", "(NOT ").replace(" n_", " NOT "))
             
         perm_vars = list(set([xx for x in dnf_perf for xx in x] + [xx for x in dnf_perf_n for xx in x]))
         
-#         if not self.check_negative:
-#             not_picked = [self.replaceSegName(inp[0][ii]) for ii in range(len(inp[0])-1) if inp[0][ii] not in perm_vars]
-#         else:
         not_picked = [self.replaceSegName(inp[0][ii]) if self.replaceSegName(inp[0][ii])[:2] != "n_" else "NOT " + self.replaceSegName(inp[0][ii])[2:] for ii in range(len(inp[0])-1) if inp[0][ii] not in perm_vars]
 
         print("")
@@ -814,7 +792,6 @@ class Deterministic_Regressor:
                     print(f"Precision: {precision * 100:.2f}%")
                     print(f"Recall: {recall * 100:.2f}%")
                     print(f"F1 Score: {f1 * 100:.2f}%")
-#                     ee = (f1 +min(precision,recall))/2-(len(reg.last_solve_expression.split("&"))+len(reg.last_solve_expression.split("|")))/5000*elements_count_penalty
                     ee = (f1 +min(precision,recall))/2-(len(reg.last_solve_expression.split("&"))+len(reg.last_solve_expression.split("|")))/4000*elements_count_penalty
                     print(f"Effectiveness & Efficiency Score: {ee * 100:.3f}%")
                     if best_ee < ee:
@@ -824,7 +801,6 @@ class Deterministic_Regressor:
                         opt_precision = precision
                         opt_recall = recall
                         opt_f1 = f1
-#             if best_ee_sofar < best_ee * 0.985:
             if best_ee_sofar < best_ee:
                 ct_opt = ct_now
                 best_ee_sofar = best_ee
@@ -853,9 +829,6 @@ class Deterministic_Regressor:
                 print(f"F1 Score: {opt_f1_sofar * 100:.2f}%")
                 print(f"Effectiveness & Efficiency Score: {best_ee_sofar * 100:.3f}%")
                 print("Expression:")
-#                 if not self.check_negative:
-#                     print(self.replaceSegName(expr_opt))
-#                 else:
                 print(self.replaceSegName(expr_opt).replace("(n_", "(NOT ").replace(" n_", " NOT "))
                 print("")
                 print("#################################")
@@ -869,7 +842,6 @@ class Deterministic_Regressor:
 
         inp = test_data
         
-#         print("Columns:", inp[0])
         
         print("false CNF analysis started")
         false_clauses = sorted([(v, k) for k, v in self.false_confidence.items()])
@@ -882,7 +854,6 @@ class Deterministic_Regressor:
         
         best_ee = 0
         if len(false_clauses) > 0:
-#             print("optimize_max 1")
 
             res = self.solve_direct(inp, false_clauses[0][1])
     
@@ -903,8 +874,6 @@ class Deterministic_Regressor:
             cnt = 0
             for i in range(1, len(false_clauses), 1):
                 cnt = cnt + 1
-#                 print("i", i)
-#                 print("cnt", cnt)
                 if cnt_out < cnt:
                     break
                     
@@ -912,9 +881,7 @@ class Deterministic_Regressor:
                     print(str(i) + "/" + str(len(false_clauses)) + " completed" )
 
                 expr = false_best_expr + " & " + false_clauses[i][1]
-#                 print("self.solve_direct before")
                 res = self.solve_direct(inp, false_clauses[i][1])
-#                 print("self.solve_direct after")
                 conf_matrix = confusion_matrix(answer, res)
                 tn, fp, fn, tp = conf_matrix.ravel()
                 if min_fp > fp and (0.15 > fn/len(answer)):
@@ -932,8 +899,6 @@ class Deterministic_Regressor:
         cnt = 0
         for i in range(1, len(true_clauses), 1):
             cnt = cnt + 1
-#             print("i", i)
-#             print("cnt", cnt)
             if cnt_out < cnt:
                 break
                     
@@ -952,9 +917,6 @@ class Deterministic_Regressor:
                     expr = false_best_expr + " | (" + true_best_expr + " | " + true_clauses[i][1] + ")"
             
             res = self.solve_direct(inp, expr)
-#             conf_matrix = confusion_matrix(answer, res)
-#             tn, fp, fn, tp = conf_matrix.ravel()
-#             if min_fp + min_fn > fp + fn:
             precision = precision_score(answer, res)
             recall = recall_score(answer, res)
             f1 = f1_score(answer, res)
@@ -977,7 +939,6 @@ class Deterministic_Regressor:
         if true_best_expr == "" and false_best_expr != "":
             final_expr = false_best_expr
         if true_best_expr != "" and false_best_expr != "":
-#             final_expr = "(" + false_best_expr + ") | (" + true_best_expr + ")"
             final_expr = false_best_expr + " | (" + true_best_expr + ")"
 
         if final_expr != "":
@@ -1003,8 +964,6 @@ class Deterministic_Regressor:
                 self.expression_opt = final_expr
                 
                 return final_expr
-
-
 
 
 ###### Load the breast cancer dataset ###### 
