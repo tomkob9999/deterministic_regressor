@@ -491,12 +491,12 @@ class Deterministic_Regressor:
         print("")
         
         imp_before_row_reduction = copy.deepcopy(inp)
-# # # ############## COMMENT OUT UNLESS TESTING ############## 
-#         CUT_PCT = 90
-#         print("NUM RECS BEFORE REDUCTION FOR TEST", len(inp))
-#         inp = Deterministic_Regressor.reduce_rows_except_first(inp, CUT_PCT)
-#         print("NUM RECS AFTER REDUCTION FOR TEST", len(inp))
 # # ############## COMMENT OUT UNLESS TESTING ############## 
+        CUT_PCT = 90
+        print("NUM RECS BEFORE REDUCTION FOR TEST", len(inp))
+        inp = Deterministic_Regressor.reduce_rows_except_first(inp, CUT_PCT)
+        print("NUM RECS AFTER REDUCTION FOR TEST", len(inp))
+# ############## COMMENT OUT UNLESS TESTING ############## 
 
         self.check_negative = check_negative
         
@@ -844,7 +844,7 @@ class Deterministic_Regressor:
         
         
         print("false CNF analysis started")
-        false_clauses = sorted([(v, k) for k, v in self.false_confidence.items()])
+        false_clauses = sorted([(v, k) for k, v in self.false_confidence.items()], reverse=True)
         
         expr = ""
         false_recall = {}
@@ -857,10 +857,12 @@ class Deterministic_Regressor:
 
             res = self.solve_direct(inp, false_clauses[0][1])
     
-            precision = precision_score(answer, res)
-            recall = recall_score(answer, res)
-            f1 = f1_score(answer, res)
-            best_ee = (f1 + min(precision,recall))/2
+#             precision = precision_score(answer, res)
+#             recall = recall_score(answer, res)
+#             f1 = f1_score(answer, res)
+#             best_ee = (f1 + min(precision,recall))/2
+#             best_ee = precision
+            
                 
 #             print("optimize_max 2")
 
@@ -884,17 +886,32 @@ class Deterministic_Regressor:
                 res = self.solve_direct(inp, false_clauses[i][1])
                 conf_matrix = confusion_matrix(answer, res)
                 tn, fp, fn, tp = conf_matrix.ravel()
-                if min_fp > fp and (0.15 > fn/len(answer)):
-#                 if min_fp + min_fn > fp + fn:
+#                 precision = precision_score(answer, res)
+#                 recall = recall_score(answer, res)
+#                 print("precision", precision)
+#                 print("recall", recall)
+#                 f1 = f1_score(answer, res)
+#                 ee = (f1 + min(precision,recall))/2
+#                 ee = precision
+#                 if best_ee < ee:
+#                 if min_fp > fp and (0.2 > fn/len(answer)):
+                if min_fp + min_fn > fp + fn:
+#                     best_ee = ee
+
                     min_fp = fp
                     min_fn = fn
                     false_best_expr = expr
                     cnt = 0
 
-            false_best_expr = "(" + false_best_expr + ")"
+                    if false_best_expr == "":
+                        false_best_expr = "(" + false_clauses[i][1] + ")"
+                    else:
+                        false_best_expr = false_best_expr + " | (" + false_clauses[i][1] + ")"
+        best_ee = 0   
+#         print("false_best_expr", false_best_expr)
         
         print("true DNF analysis started")
-        true_clauses = sorted([(v, k) for k, v in self.true_confidence.items()])
+        true_clauses = sorted([(v, k) for k, v in self.true_confidence.items()], reverse=True)
         true_best_expr = ""
         cnt = 0
         for i in range(1, len(true_clauses), 1):
@@ -916,11 +933,14 @@ class Deterministic_Regressor:
                 else:
                     expr = false_best_expr + " | (" + true_best_expr + " | " + true_clauses[i][1] + ")"
             
+#             print("try true expr", expr)
             res = self.solve_direct(inp, expr)
             precision = precision_score(answer, res)
             recall = recall_score(answer, res)
             f1 = f1_score(answer, res)
             ee = (f1 + min(precision,recall))/2
+#             print("best_ee", best_ee)
+#             print("ee", ee)
             if best_ee < ee:
                 best_ee = ee
                 min_fp = fp
@@ -931,6 +951,8 @@ class Deterministic_Regressor:
                     true_best_expr = true_best_expr + " | " + true_clauses[i][1]
                 cnt = 0
 
+#         print("true_best_expr", true_best_expr)
+        
         final_expr = ""
         if true_best_expr == "" and false_best_expr == "":
             final_expr = ""
@@ -964,6 +986,7 @@ class Deterministic_Regressor:
                 self.expression_opt = final_expr
                 
                 return final_expr
+
 
 
 ###### Load the breast cancer dataset ###### 
