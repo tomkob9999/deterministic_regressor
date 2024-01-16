@@ -36,9 +36,17 @@ Stats:
 
 Here are the results of the famous iris dataset (https://scikit-learn.org/stable/auto_examples/datasets/plot_iris_dataset.html). 1/3 was used for training, 1/3 was used for validation, and the rest was used for test.  solve_with_opt_class() has been added for non-binary data.  It can be used for binary data as well.
 
-- Precision: 96.42%
-- Recall: 96.00%
-- F1 Score: 95.94%
+Predicted
+
+[2, 2, 0, 1, 1, 1, 0, 2, 0, 1, 0, 1, 2, 0, 2, 1, 2, 0, 0, 2, 1, 0, 1, 1, 1, 1, 2, 2, 1, 2, 1, 2, 2, 0, 0, 0, 0, 1, 2, 2, 1, 2, 0, 2, 2, 1, 0, 0, 0, 1]
+
+Actual
+
+[2, 2, 0, 1, 2, 1, 0, 2, 0, 1, 0, 1, 2, 0, 2, 1, 2, 0, 0, 2, 1, 0, 1, 1, 1, 1, 2, 2, 1, 2, 1, 2, 2, 0, 0, 0, 0, 1, 2, 2, 1, 2, 0, 2, 2, 1, 0, 0, 0, 1]
+
+- Precision: 98.12%
+- Recall: 98.00%
+- F1 Score: 98.00%
 
 
 TO-DO-FUTURE:
