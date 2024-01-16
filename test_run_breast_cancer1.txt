@@ -37,7 +37,7 @@ reg.prepropcess(data_list, by_two=3)
 print("prepropcess() finished", measure(start_time))
 start_time = time.time()
 
-inp = reg.train(data_list=reg.get_train_datres_with_head(), error_tolerance=0.03, max_dnf_len=2, by_two=2, min_match=30)
+inp = reg.train(data_list=reg.get_train_datres_with_head(), error_tolerance=0.03, max_dnf_len=2, by_two=2)
 
 print("train() finished", measure(start_time))
 start_time = time.time()# # print(inp)

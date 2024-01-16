@@ -21,12 +21,20 @@ def measure(start_time):
 start_time = time.time()
 
 
-file_path = '/kaggle/input/xxx/sample_toy_data_file.txt' # Short
+file_path = '/kaggle/input/tomio1/dnf_regression.txt' # Short
+file_path = '/kaggle/input/tomio2/dnf_regression.txt' # Short
+# file_path = '/kaggle/input/tomio3/dnf_regression.txt' # Short
+file_path = '/kaggle/input/tomio4/dnf_regression.txt' # Long
+file_path = '/kaggle/input/tomio5/dnf_regression.txt' # Long
+# file_path = '/kaggle/input/tomio6/dnf_regression.txt' # Medium
+# file_path = '/kaggle/input/tomio7/dnf_regression.txt' # Medium
+
+# file_path = '/kaggle/input/tomio10/dnf_regression.txt' # ERROR
+# file_path = '/kaggle/input/tomio9/dnf_regression.txt' # ERROR
 
 reg = Deterministic_Regressor()
-
 oup = reg.train(file_path=file_path, error_tolerance=0.02)
-# oup = reg.train(file_path=file_path, error_tolerance=0.03, min_match=3)
+# oup = reg.train(file_path=file_path, error_tolerance=0.03, min_match=0.03)
 # oup = reg.train(file_path=file_path, error_tolerance=0.00)
 # oup = reg.train(file_path=file_path, error_tolerance=0.00, check_negative=True)
 
@@ -35,6 +43,3 @@ print("train() finished", measure(start_time))
 start_time = time.time()
 
 res = reg.solve(oup, use_expression="common")
-
-print("reg.solve() finished", measure(start_time))
-start_time = time.time()

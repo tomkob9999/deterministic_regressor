@@ -1,6 +1,6 @@
 # Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 2.8.5
+# Version: 2.8.6
 # Date: 2024/01/17
 
 import itertools
@@ -486,7 +486,7 @@ class Deterministic_Regressor:
         inp = [[Deterministic_Regressor.try_convert_to_numeric(inp[i][j]) for j in range(len(inp[i]))] for i in range(len(inp))]
         return self.discretize_data(inp, by_two)
         
-    def train(self, file_path=None, data_list=None, max_dnf_len=4, check_false=True, check_negative=False, error_tolerance=0.02, by_two=2, min_match=3, use_approx_dnf=False, redundant_thresh=1.00):
+    def train(self, file_path=None, data_list=None, max_dnf_len=4, check_false=True, check_negative=False, error_tolerance=0.02, by_two=2, min_match=0.03, use_approx_dnf=False, redundant_thresh=1.00):
 
 # file_path: input file in tab-delimited text
 # check_negative: enable to check the negative conditions or not.  This one is very heavy.
@@ -621,7 +621,8 @@ class Deterministic_Regressor:
                 cnt_unmatch = len([f for f in r if f == 0])
                 if cnt_unmatch/cnt_all > error_tolerance:
                     continue
-                if cnt_all - cnt_unmatch < min_match:
+#                 if cnt_all - cnt_unmatch < min_match:
+                if (cnt_all - cnt_unmatch)/numrows < min_match:
                     continue
 
                 raw_perf.append([ii for ii in p_list[i]])
@@ -672,7 +673,8 @@ class Deterministic_Regressor:
                         if cnt_unmatch/cnt_all > error_tolerance:
                             continue
 
-                        if cnt_all - cnt_unmatch < min_match:
+#                         if cnt_all - cnt_unmatch < min_match:
+                        if (cnt_all - cnt_unmatch)/numrows < min_match:
                             continue
                             
                         raw_perf_n.append([ii for ii in p_list[i]])
@@ -709,7 +711,8 @@ class Deterministic_Regressor:
                         if cnt_unmatch/cnt_all > error_tolerance:
                             continue
 
-                        if cnt_all - cnt_unmatch < min_match:
+#                         if cnt_all - cnt_unmatch < min_match:
+                        if (cnt_all - cnt_unmatch)/numrows < min_match:
                             continue
                             
                         raw_perf_n.append([ii for ii in p_list[i]])
@@ -1032,7 +1035,7 @@ class Deterministic_Regressor:
         return rows[:split_index], rows[split_index:]
 
     def train_and_optimize(self, data_list=None, max_dnf_len=4, check_false=True, check_negative=False, error_tolerance=0.02, by_two=2, 
-                       min_match=3, use_approx_dnf=False, redundant_thresh=1.00, solve_method=["common", "union"], elements_count_penalty=1.0):
+                       min_match=0.03, use_approx_dnf=False, redundant_thresh=1.00, solve_method=["common", "union"], elements_count_penalty=1.0):
         
         print("Training started...")
         
@@ -1069,7 +1072,7 @@ class Deterministic_Regressor:
         return self.optimize_params(inp, answer, solve_method=solve_method, elements_count_penalty=1.0)
     
     def train_and_optimize_bulk(self, data_list, expected_answers, max_dnf_len=4, check_false=True, check_negative=False, error_tolerance=0.02, by_two=2, 
-                   min_match=3, use_approx_dnf=False, redundant_thresh=1.00, solve_method=["common", "union"], elements_count_penalty=1.0):
+                   min_match=0.03, use_approx_dnf=False, redundant_thresh=1.00, solve_method=["common", "union"], elements_count_penalty=1.0):
 
         self.children = [Deterministic_Regressor() for _ in range(len(expected_answers))]
 
@@ -1118,7 +1121,7 @@ class Deterministic_Regressor:
         return new_res
     
     def train_and_optimize_class(self, data_list, expected_answers, max_dnf_len=4, check_false=True, check_negative=False, error_tolerance=0.02, by_two=2, 
-               min_match=3, use_approx_dnf=False, redundant_thresh=1.00, solve_method=["common", "union"], elements_count_penalty=1.0):
+               min_match=0.03, use_approx_dnf=False, redundant_thresh=1.00, solve_method=["common", "union"], elements_count_penalty=1.0):
         
         answers = [[0 for _ in range(len(expected_answers))] for _ in range(max(expected_answers)+1)]
         for i in range(len(answers[0])):
@@ -1162,5 +1165,3 @@ class Deterministic_Regressor:
     def get_test_datres_with_head(self):
         return [self.whole_rows[0]] + self.test_rows
     
-    
-
