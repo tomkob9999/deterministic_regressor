@@ -1,0 +1,40 @@
+###### Simple Handmade Data Files ######
+
+import copy
+from sklearn.metrics import precision_score, recall_score, f1_score
+from sklearn.datasets import load_breast_cancer
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import accuracy_score, classification_report
+from sklearn.datasets import load_iris
+
+import time
+
+def measure(start_time):
+    end_time = time.time()
+
+    elapsed_time = end_time - start_time
+    minutes, seconds = divmod(elapsed_time, 60)
+    milliseconds = int(elapsed_time * 1000 % 1000)
+    return f"{int(minutes)}:{str(int(seconds)).zfill(2)}:{str(int(milliseconds)).zfill(3)}"
+           
+start_time = time.time()
+
+
+file_path = '/kaggle/input/xxx/sample_toy_data_file.txt' # Short
+
+reg = Deterministic_Regressor()
+
+oup = reg.train(file_path=file_path, error_tolerance=0.02)
+# oup = reg.train(file_path=file_path, error_tolerance=0.03, min_match=3)
+# oup = reg.train(file_path=file_path, error_tolerance=0.00)
+# oup = reg.train(file_path=file_path, error_tolerance=0.00, check_negative=True)
+
+
+print("train() finished", measure(start_time))
+start_time = time.time()
+
+res = reg.solve(oup, use_expression="common")
+
+print("reg.solve() finished", measure(start_time))
+start_time = time.time()

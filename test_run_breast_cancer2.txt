@@ -1,0 +1,68 @@
+###### Breast Cancer Data Test 2 ######
+
+import copy
+from sklearn.metrics import precision_score, recall_score, f1_score
+from sklearn.datasets import load_breast_cancer
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import accuracy_score, classification_report
+from sklearn.datasets import load_iris
+
+import time
+
+def measure(start_time):
+    end_time = time.time()
+
+    elapsed_time = end_time - start_time
+    minutes, seconds = divmod(elapsed_time, 60)
+    milliseconds = int(elapsed_time * 1000 % 1000)
+    return f"{int(minutes)}:{str(int(seconds)).zfill(2)}:{str(int(milliseconds)).zfill(3)}"
+           
+start_time = time.time()
+
+###### Load the breast cancer dataset ###### 
+data = load_breast_cancer()
+X, y = data.data, data.target
+# X, X_test, y, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+X_list = [list(a) for a in X]
+y_list = list(y)
+heads = [f.replace(" ", "_") for f in data.feature_names]
+X_list.insert(0, heads)
+y_list.insert(0, "Result")
+data_list = [X_list[i] + [y_list[i]] for i in range(len(X_list))]
+###### Load the breast cancer dataset ###### 
+
+print("load_breast_cancer() finished", measure(start_time))
+start_time = time.time()
+
+reg = Deterministic_Regressor()
+
+reg.prepropcess(data_list, by_two=3)
+
+print("prepropcess() finished", measure(start_time))
+start_time = time.time()
+
+inp = reg.train_and_optimize(data_list=reg.get_train_datres_with_head(), error_tolerance=0.03, max_dnf_len=2, by_two=2, min_match=30)
+
+print("train_and_optimize() finished", measure(start_time))
+start_time = time.time()# # print(inp)
+res = reg.solve_with_opt(reg.get_test_dat_with_head())
+        
+print("solve_with_opt() finished", measure(start_time))
+start_time = time.time()
+
+answer = reg.get_test_res_wo_head()
+
+if len(res) > 0:
+    print("Predicted")
+    print(res)
+    print("Actual")
+    print(answer)
+
+    precision = precision_score(answer, res)
+    recall = recall_score(answer, res)
+    f1 = f1_score(answer, res)
+
+    print(f"Precision: {precision * 100:.2f}%")
+    print(f"Recall: {recall * 100:.2f}%")
+    print(f"F1 Score: {f1 * 100:.2f}%")
