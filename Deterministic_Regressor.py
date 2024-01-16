@@ -1,6 +1,6 @@
 # Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 2.8.1
+# Version: 2.8.3
 # Date: 2024/01/15
 
 import itertools
@@ -202,15 +202,9 @@ class Deterministic_Regressor:
                 s = s.strip()
                 if s in self.false_confidence:
                     if self.false_confidence[s] >= false_confidence_thresh:
-#                         print("false_confidence_thresh", false_confidence_thresh)
-#                         print("self.false_confidence[s]", self.false_confidence[s])
-#                         print("s", s)
                         false_list.append(s)
                         active_false_clauses += 1
                 else:
-#                     print("NOT IN")
-#                     print("false_confidence_thresh", false_confidence_thresh)
-#                     print("s", s)
                     false_list.append(s)
                     active_false_clauses += 1
             false_exp = " & ".join(false_list)
@@ -254,14 +248,11 @@ class Deterministic_Regressor:
 
         print("Solver Expression:")
         
-#         if not self.check_negative:
-#             print(self.replaceSegName(expr))
-#         else:
         print(self.replaceSegName(expr).replace("(n_", "(NOT ").replace(" n_", " NOT "))
+        print("expr", expr)
+        print("self.replaceSegName(expr)", self.replaceSegName(expr))
         
         self.last_solve_expression = expr
-        
-#         print("????? tokens", tokens)
 
         for i in range(len(inp_list)):
             res[i] = Deterministic_Regressor.myeval(inp_list[i], tokens, expr)
@@ -346,6 +337,7 @@ class Deterministic_Regressor:
         if not silent:
             print("")
             print(min_max_per_group)
+        
         return df
 
     def discretize_data(self, data_list, by_two=2, silent=False):
@@ -510,7 +502,6 @@ class Deterministic_Regressor:
                 inp = [line.strip().split('\t') for line in f]
         else:
             inp = data_list
-
         
         print("Train Records:", len(inp)-1)
     
@@ -773,13 +764,11 @@ class Deterministic_Regressor:
         print(not_picked)
         print("")
         
-#         return inp
         return imp_before_row_reduction
 
 
-    def optimize_params(self, test_data, answer, elements_count_penalty=1.0, solve_method=["common"]):
-
-        print("optimize_params test_data[0]", test_data[0])
+    def optimize_params(self, test_data, answer, elements_count_penalty=1.0, solve_method=["common", "union"]):
+        
         inp = test_data
         
         best_ee_sofar = 0
@@ -805,6 +794,7 @@ class Deterministic_Regressor:
             print("")
             print("")
             print("##### Power Level", ct_now, "######")
+        
             best_ee = 0
             win_option = ""
             win_expr = ""
@@ -873,7 +863,7 @@ class Deterministic_Regressor:
                 print("")
                 print("#################################")
                 print("")
-                
+        
                 self.expression_opt = expr_opt
                 self.opt_f1 = f1
                 
@@ -882,7 +872,6 @@ class Deterministic_Regressor:
     def optimize_max(self, test_data, answer, cnt_out=5):
 
         inp = test_data
-        
         
         print("false CNF analysis started")
         false_clauses = sorted([(v, k) for k, v in self.false_confidence.items()], reverse=True)
@@ -1076,14 +1065,15 @@ class Deterministic_Regressor:
     def train_and_optimize_bulk(self, data_list, expected_answers, max_dnf_len=4, check_false=True, check_negative=False, error_tolerance=0.02, by_two=2, 
                    min_match=3, use_approx_dnf=False, redundant_thresh=1.00, solve_method=["common", "union"], elements_count_penalty=1.0):
 
-        
-#         children = [Deterministic_Regressor()] * len(expected_answers)
         self.children = [Deterministic_Regressor() for _ in range(len(expected_answers))]
 
         for i in range(len(self.children)):
             print("Child", i)
+            
+            self.children[i].dic_segments = copy.deepcopy(self.dic_segments)
             d_list = copy.deepcopy(data_list)
             d_list[0].append("res")
+            
             for k in range(len(d_list)-1):
                 d_list[k+1].append(expected_answers[i][k])
             self.children[i].train_and_optimize(data_list=d_list, max_dnf_len=max_dnf_len, check_false=check_false, check_negative=check_negative, error_tolerance=error_tolerance, by_two=by_two, min_match=min_match, use_approx_dnf=use_approx_dnf, redundant_thresh=redundant_thresh, solve_method=solve_method, elements_count_penalty=elements_count_penalty)
@@ -1098,19 +1088,14 @@ class Deterministic_Regressor:
                 r == [0] * (len(inp_p)-1)
             res.append(r)
             
-#         print([len(r) for r in res])
         return res
     
     def solve_with_opt_class(self, inp_p):
         
         res = self.solve_with_opt_bulk(inp_p)
         
-        for r in res:
-            print(r)
-        
         dic_f1 = {i: self.children[i].opt_f1 for i in range(len(self.children))}
         
-        print("Weights", dic_f1)
         len_rows = len(res[0])
         len_res = len(res)
         new_res = [0] * len_rows
@@ -1122,6 +1107,7 @@ class Deterministic_Regressor:
                     break
                 if k == len(numbers) - 1:
                     new_res[i] = numbers[k]
+                    
 
         return new_res
     
