@@ -1,7 +1,7 @@
 # Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 2.8.4
-# Date: 2024/01/15
+# Version: 2.8.5
+# Date: 2024/01/17
 
 import itertools
 from sympy.logic import boolalg
@@ -36,6 +36,10 @@ class Deterministic_Regressor:
         self.opt_f1 = 0.001
         
         self.children = []
+        
+        self.whole_rows = []
+        self.test_rows = []
+        self.train_rows = []
         
         
 
@@ -386,97 +390,97 @@ class Deterministic_Regressor:
 
         return sampled_rows
 
-    #     works only for toy data
-    def train_simple(self, file_path=None, data_list=None, max_dnf_len=4, by_two=1):
+#     #     WORKS ONLY FOR TOY DATA, NO USE USUALLY BUT KEEP FOR REFERENCE
+#     def train_simple(self, file_path=None, data_list=None, max_dnf_len=4, by_two=1):
 
-        # Example usage:
-        # file_path = '/kaggle/input/dnf-regression/dnf_regression.txt'
-        # file_path = '/kaggle/input/tomio5/dnf_regression.txt'
+#         # Example usage:
+#         # file_path = '/kaggle/input/dnf-regression/dnf_regression.txt'
+#         # file_path = '/kaggle/input/tomio5/dnf_regression.txt'
         
-        inp = None
-        if file_path is not None:
-            with open(file_path, 'r') as f:
-                inp = [line.strip().split('\t') for line in f]
-        else:
-            inp = data_list
+#         inp = None
+#         if file_path is not None:
+#             with open(file_path, 'r') as f:
+#                 inp = [line.strip().split('\t') for line in f]
+#         else:
+#             inp = data_list
 
         
-        print("Train Records:", len(inp)-1)
+#         print("Train Records:", len(inp)-1)
     
-        inp = [[Deterministic_Regressor.try_convert_to_numeric(inp[i][j]) for j in range(len(inp[i]))] for i in range(len(inp))]
+#         inp = [[Deterministic_Regressor.try_convert_to_numeric(inp[i][j]) for j in range(len(inp[i]))] for i in range(len(inp))]
         
-        print("Discretizing...")
-        inp = self.discretize_data(inp, by_two)
-        print("")
+#         print("Discretizing...")
+#         inp = self.discretize_data(inp, by_two)
+#         print("")
         
-        imp_before_row_reduction = copy.deepcopy(inp)
-# # # # ############## COMMENT OUT UNLESS TESTING ############## 
-#         CUT_PCT = 60
-#         print("NUM RECS BEFORE REDUCTION FOR TEST", len(inp))
-#         inp = Deterministic_Regressor.reduce_rows_except_first(inp, CUT_PCT)
-#         print("NUM RECS AFTER REDUCTION FOR TEST", len(inp))
-# # # # ############## COMMENT OUT UNLESS TESTING ############## 
+#         imp_before_row_reduction = copy.deepcopy(inp)
+# # # # # ############## COMMENT OUT UNLESS TESTING ############## 
+# #         CUT_PCT = 60
+# #         print("NUM RECS BEFORE REDUCTION FOR TEST", len(inp))
+# #         inp = Deterministic_Regressor.reduce_rows_except_first(inp, CUT_PCT)
+# #         print("NUM RECS AFTER REDUCTION FOR TEST", len(inp))
+# # # # # ############## COMMENT OUT UNLESS TESTING ############## 
 
         
-        numvars = len(inp[1])-1
+#         numvars = len(inp[1])-1
 
-        print("Columns:")
-        print(inp[0])
-        self.tokens = copy.deepcopy(inp[0])
+#         print("Columns:")
+#         print(inp[0])
+#         self.tokens = copy.deepcopy(inp[0])
         
-        print("")
+#         print("")
             
-        dic = dict()
+#         dic = dict()
                     
-        dic_opp = dict()
+#         dic_opp = dict()
         
-        true_set = set()
-        false_set = set()
+#         true_set = set()
+#         false_set = set()
         
-        for i in range(1, len(inp), 1):
-            s = ""
-            cnt_1 = 0
-            cnt_0 = 0
-            for j in range(len(inp[i]) - 1):
-                s += str(inp[i][j])
-                if inp[i][j] == 1:
-                    cnt_1 += 1
-                else:
-                    cnt_0 += 1
+#         for i in range(1, len(inp), 1):
+#             s = ""
+#             cnt_1 = 0
+#             cnt_0 = 0
+#             for j in range(len(inp[i]) - 1):
+#                 s += str(inp[i][j])
+#                 if inp[i][j] == 1:
+#                     cnt_1 += 1
+#                 else:
+#                     cnt_0 += 1
                     
-            truefalse = inp[i][len(inp[i]) - 1]
-            dic[int(s, 2)] = truefalse
-            if truefalse == 1:
-                if cnt_1 <= max_dnf_len:
-                    true_set.add(s)
-            else:
-                if cnt_0 <= max_dnf_len:
-                    false_set.add(s)
+#             truefalse = inp[i][len(inp[i]) - 1]
+#             dic[int(s, 2)] = truefalse
+#             if truefalse == 1:
+#                 if cnt_1 <= max_dnf_len:
+#                     true_set.add(s)
+#             else:
+#                 if cnt_0 <= max_dnf_len:
+#                     false_set.add(s)
                     
-        true_dnf = Deterministic_Regressor.simplify_dnf("(" + ") | (".join([" & ".join([self.tokens[i] for i in range(len(f)) if f[i] == "1"]) for f in true_set]) + ")")
-        false_cnf = Deterministic_Regressor.simplify_dnf("(" + ") & (".join([" | ".join([self.tokens[i] for i in range(len(f)) if f[i] == "0"]) for f in false_set]) + ")", use_cnf=True)
-        if true_dnf == "()":
-            true_dnf = ""
-        if false_cnf == "()":
-            false_cnf = ""
-        self.expression_true = true_dnf
-        self.expression_false = false_cnf
+#         true_dnf = Deterministic_Regressor.simplify_dnf("(" + ") | (".join([" & ".join([self.tokens[i] for i in range(len(f)) if f[i] == "1"]) for f in true_set]) + ")")
+#         false_cnf = Deterministic_Regressor.simplify_dnf("(" + ") & (".join([" | ".join([self.tokens[i] for i in range(len(f)) if f[i] == "0"]) for f in false_set]) + ")", use_cnf=True)
+#         if true_dnf == "()":
+#             true_dnf = ""
+#         if false_cnf == "()":
+#             false_cnf = ""
+#         self.expression_true = true_dnf
+#         self.expression_false = false_cnf
             
-        print("")
-        print("TRUE DNF - " + str(len(true_dnf.split("|"))))
-        print("--------------------------------")
+#         print("")
+#         print("TRUE DNF - " + str(len(true_dnf.split("|"))))
+#         print("--------------------------------")
 
-        if len(true_dnf) > 0:
-            print(self.replaceSegName(self.expression_true))
+#         if len(true_dnf) > 0:
+#             print(self.replaceSegName(self.expression_true))
             
 
-        print("")
-        print("FALSE CNF - " + str(len(false_cnf.split("&"))))
-        print("--------------------------------")
-        if len(false_cnf) > 0:
-            print(self.replaceSegName(self.expression_false))
+#         print("")
+#         print("FALSE CNF - " + str(len(false_cnf.split("&"))))
+#         print("--------------------------------")
+#         if len(false_cnf) > 0:
+#             print(self.replaceSegName(self.expression_false))
             
-        return imp_before_row_reduction
+#         return imp_before_row_reduction
     
     def clean_and_discretize(self, inp, by_two):
         inp = [[Deterministic_Regressor.try_convert_to_numeric(inp[i][j]) for j in range(len(inp[i]))] for i in range(len(inp))]
@@ -505,9 +509,14 @@ class Deterministic_Regressor:
     
         inp = [[Deterministic_Regressor.try_convert_to_numeric(inp[i][j]) for j in range(len(inp[i]))] for i in range(len(inp))]
         
-        print("Discretizing...")
-        inp = self.discretize_data(inp, by_two)
-        print("")
+#         print("Discretizing...")
+#         inp = self.discretize_data(inp, by_two)
+#         print("")
+        for r in inp[1:]:
+            for c in r:
+                if c != 1 and c != 0:
+                    print("The data contents needs to be 1 or 0", c)
+                    return []
         
         imp_before_row_reduction = copy.deepcopy(inp)
 # # # ############## COMMENT OUT UNLESS TESTING ############## 
@@ -867,7 +876,7 @@ class Deterministic_Regressor:
                 
                 return win_option_sofar, ct_opt
 
-    def optimize_max(self, test_data, answer, cnt_out=5):
+    def optimize_compact(self, test_data, answer, cnt_out=5):
 
         inp = test_data
         
@@ -997,7 +1006,7 @@ class Deterministic_Regressor:
 
             if len(res) > 0:
                 print("")
-                print("#### BEST EXPRESSION FOUND ####")
+                print("#### NICE COMPACT EXPRESSION FOUND! ####")
                 print("")
                 precision = precision_score(answer, res)
                 recall = recall_score(answer, res)
@@ -1118,31 +1127,40 @@ class Deterministic_Regressor:
                     check_negative=check_negative, error_tolerance=error_tolerance, by_two=by_two, 
                     min_match=min_match, use_approx_dnf=use_approx_dnf, redundant_thresh=redundant_thresh, solve_method=solve_method, elements_count_penalty=elements_count_penalty)
     
+    def prepropcess(self, whole_rows, by_two):
+        self.whole_rows = self.clean_and_discretize(whole_rows, by_two)
+        headers = self.whole_rows
+        data = self.whole_rows[1:]
+        random.shuffle(data)  # Shuffle rows in-place
+        split_index = len(data) // 3  # Integer division for equal or near-equal halves
+        self.test_rows = data[:split_index]
+        self.train_rows = data[split_index:]
     
-
-
-
-###### Load the breast cancer dataset ###### 
-data = load_breast_cancer()
-X, y = data.data, data.target
-X_list = [list(a) for a in X]
-y_list = list(y)
-heads = [f.replace(" ", "_") for f in data.feature_names]
-X_list.insert(0, heads)
-y_list.insert(0, "Result")
-data_list = [X_list[i] + [y_list[i]] for i in range(len(X_list))]
-
-reg = Deterministic_Regressor()
-inp = reg.train(data_list=data_list, error_tolerance=0.03, max_dnf_len=3, by_four=1, min_match=30)
-
-print("train() finished", measure(start_time))
-start_time = time.time()# # print(inp)
-
-
-answer = [int(inp[i][-1]) for i in range(1, len(inp), 1)]
-inp = [row[:-1] for row in inp]
-
-reg.optimize_params(inp, answer)
-#reg.optimize_params(inp, answer, used_options=["union", "common"])
-
+    def get_train_dat_wo_head(self):
+        return [row[:-1] for row in self.train_rows]
+    def get_train_res_wo_head(self):
+        return [row[-1] for row in self.train_rows]
+    def get_train_dat_with_head(self):
+        return [self.whole_rows[0][:-1]] + [row[:-1] for row in self.train_rows]
+#     def get_train_res_with_head(self):
+#         return [self.whole_rows[0][:-1]] + [row[-1] for row in self.train_rows]
+    def get_train_datres_wo_head(self):
+        return self.train_rows
+    def get_train_datres_with_head(self):
+        return [self.whole_rows[0]] + self.train_rows
+    
+    def get_test_dat_wo_head(self):
+        return [row[:-1] for row in self.test_rows]
+    def get_test_res_wo_head(self):
+        return [row[-1] for row in self.test_rows]
+    def get_test_dat_with_head(self):
+        return [self.whole_rows[0][:-1]] + [row[:-1] for row in self.test_rows]
+#     def get_test_res_with_head(self):
+#         return [self.whole_rows[0][:-1]] + [row[-1] for row in self.test_rows]
+    def get_test_datres_wo_head(self):
+        return self.test_rows[1:]
+    def get_test_datres_with_head(self):
+        return [self.whole_rows[0]] + self.test_rows
+    
+    
 
