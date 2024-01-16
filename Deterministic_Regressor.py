@@ -1,6 +1,6 @@
 # Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 2.7.5
+# Version: 2.8.1
 # Date: 2024/01/15
 
 import itertools
@@ -33,6 +33,11 @@ class Deterministic_Regressor:
         
         self.expression_opt = ""
         self.by_two = -1
+        self.opt_f1 = 0.001
+        
+        self.children = []
+        
+        
 
     def remove_supersets(sets_list):
         result = []
@@ -125,27 +130,32 @@ class Deterministic_Regressor:
                 print("power_level must be between 0 and 32")
                 return
 
-            max_freq = max([v for k, v in self.true_confidence.items()])
-            min_freq = min([v for k, v in self.true_confidence.items()])
-#             print("max_freq true", max_freq)
-#             print("min_freq true", min_freq)
-            this_power = int(power_level/max_power * (max_freq-min_freq) + 0.9999999999)
-            
-            if max_freq - this_power < 0:
-                true_confidence_thresh = 0
+            if len(self.true_confidence) == 0:
+                    true_confidence_thresh = 0  
             else:
-                true_confidence_thresh = max_freq - this_power
-                
-            max_freq = max([v for k, v in self.false_confidence.items()])
-            min_freq = min([v for k, v in self.false_confidence.items()])
-#             print("max_freq false", max_freq)
-#             print("min_freq false", min_freq)
-            this_power = int(power_level/max_power * (max_freq-min_freq) + 0.9999999999)
-            if max_freq - this_power < 0:
-                false_confidence_thresh = 0
+                max_freq = max([v for k, v in self.true_confidence.items()])
+                min_freq = min([v for k, v in self.true_confidence.items()])
+    #             print("max_freq true", max_freq)
+    #             print("min_freq true", min_freq)
+                this_power = int(power_level/max_power * (max_freq-min_freq) + 0.9999999999)
+
+                if max_freq - this_power < 0:
+                    true_confidence_thresh = 0
+                else:
+                    true_confidence_thresh = max_freq - this_power
+
+            if len(self.false_confidence) == 0:
+                    false_confidence_thresh = 0  
             else:
-                false_confidence_thresh = max_freq - this_power
-            
+                max_freq = max([v for k, v in self.false_confidence.items()])
+                min_freq = min([v for k, v in self.false_confidence.items()])
+    #             print("max_freq false", max_freq)
+    #             print("min_freq false", min_freq)
+                this_power = int(power_level/max_power * (max_freq-min_freq) + 0.9999999999)
+                if max_freq - this_power < 0:
+                    false_confidence_thresh = 0
+                else:
+                    false_confidence_thresh = max_freq - this_power
         else:
             true_confidence_thresh = confidence_thresh
             false_confidence_thresh = confidence_thresh
@@ -251,8 +261,14 @@ class Deterministic_Regressor:
         
         self.last_solve_expression = expr
         
+#         print("????? tokens", tokens)
+
         for i in range(len(inp_list)):
             res[i] = Deterministic_Regressor.myeval(inp_list[i], tokens, expr)
+            
+        if res is None:
+            return []
+        
         return res
     
         
@@ -262,7 +278,8 @@ class Deterministic_Regressor:
            
         inp = copy.deepcopy(inp_p)
         inp = [[Deterministic_Regressor.try_convert_to_numeric(inp[i][j]) for j in range(len(inp[i]))] for i in range(len(inp))]
-        inp = self.discretize_data(inp, self.by_two, silent=True)
+        # SHOULD NOT DISCRETIXED DURING SOLVE
+#         inp = self.discretize_data(inp, self.by_two, silent=True)
 
         numvars = len(inp[0])
 
@@ -274,6 +291,8 @@ class Deterministic_Regressor:
                     inp[j].insert(i+numvars,0 if inp[j][i] == 1 else 1)
             numvars *= 2
 
+#         print("inp[0]", inp[0])
+        
         tokens = inp[0]
         inp_list = [row for row in inp[1:]]
         
@@ -291,7 +310,10 @@ class Deterministic_Regressor:
     
             
     def solve_with_opt(self, inp_p):
-        return self.solve_direct(inp_p, self.expression_opt)
+        if self.expression_opt == "":
+            return [0] * (len(inp_p)-1)
+        else:
+            return self.solve_direct(inp_p, self.expression_opt)
     
     def replaceSegName(self, str):
         s = str
@@ -466,7 +488,10 @@ class Deterministic_Regressor:
             
         return imp_before_row_reduction
     
-    
+    def clean_and_discretize(self, inp, by_two):
+        inp = [[Deterministic_Regressor.try_convert_to_numeric(inp[i][j]) for j in range(len(inp[i]))] for i in range(len(inp))]
+        return self.discretize_data(inp, by_two)
+        
     def train(self, file_path=None, data_list=None, max_dnf_len=4, check_false=True, check_negative=False, error_tolerance=0.02, by_two=2, min_match=3, use_approx_dnf=False, redundant_thresh=1.00):
 
 # file_path: input file in tab-delimited text
@@ -754,6 +779,7 @@ class Deterministic_Regressor:
 
     def optimize_params(self, test_data, answer, elements_count_penalty=1.0, solve_method=["common"]):
 
+        print("optimize_params test_data[0]", test_data[0])
         inp = test_data
         
         best_ee_sofar = 0
@@ -798,12 +824,12 @@ class Deterministic_Regressor:
                     print(f"Precision: {precision * 100:.2f}%")
                     print(f"Recall: {recall * 100:.2f}%")
                     print(f"F1 Score: {f1 * 100:.2f}%")
-                    ee = (f1 +min(precision,recall))/2-(len(reg.last_solve_expression.split("&"))+len(reg.last_solve_expression.split("|")))/4000*elements_count_penalty
+                    ee = (f1 +min(precision,recall))/2-(len(self.last_solve_expression.split("&"))+len(self.last_solve_expression.split("|")))/4000*elements_count_penalty
                     print(f"Effectiveness & Efficiency Score: {ee * 100:.3f}%")
                     if best_ee < ee:
                         best_ee = ee
                         win_option = o
-                        win_expr = reg.last_solve_expression
+                        win_expr = self.last_solve_expression
                         opt_precision = precision
                         opt_recall = recall
                         opt_f1 = f1
@@ -820,6 +846,14 @@ class Deterministic_Regressor:
                     doexit = True
             elif jump == 1:
                 doexit = True
+            elif ct_now == 0:
+                print("#################################")
+                print("")
+                print("SORRY NO SOLUTION FOUND")
+                print("")
+                print("#################################")
+                print("")
+                return None, None
             else:
                 jump = int(jump/2)
                 ct_now = ct_now - jump
@@ -841,6 +875,7 @@ class Deterministic_Regressor:
                 print("")
                 
                 self.expression_opt = expr_opt
+                self.opt_f1 = f1
                 
                 return win_option_sofar, ct_opt
 
@@ -986,6 +1021,8 @@ class Deterministic_Regressor:
                 print(f"F1 Score: {f1 * 100:.2f}%")
                 
                 print("")
+
+                self.opt_f1 = f1
                 
                 print(self.replaceSegName(final_expr).replace("(n_", "(NOT ").replace(" n_", " NOT "))
                 
@@ -1002,14 +1039,13 @@ class Deterministic_Regressor:
     def train_and_optimize(self, data_list=None, max_dnf_len=4, check_false=True, check_negative=False, error_tolerance=0.02, by_two=2, 
                        min_match=3, use_approx_dnf=False, redundant_thresh=1.00, solve_method=["common", "union"], elements_count_penalty=1.0):
         
-        print("training started")
+        print("Training started...")
         
         self.by_two = by_two
         
         headers = data_list[0]
         data_list2 = data_list[1:]
         
-#         train_data, valid_data = train_test_split(X=data_list2, test_size=0.5, random_state=42)
         train_data, valid_data = Deterministic_Regressor.random_split_matrix(data_list2)
 
         train_inp = [headers] + train_data
@@ -1017,12 +1053,11 @@ class Deterministic_Regressor:
         self.train(data_list=train_inp, max_dnf_len=max_dnf_len, check_false=check_false, check_negative=check_negative, 
                         error_tolerance=error_tolerance, by_two=by_two, min_match=min_match, use_approx_dnf=use_approx_dnf, redundant_thresh=redundant_thresh)
 
-        print("optimization started")
+        print("Optimization started...")
         inp = [headers] + valid_data
            
         inp = [[Deterministic_Regressor.try_convert_to_numeric(inp[i][j]) for j in range(len(inp[i]))] for i in range(len(inp))]
-#         print("Discretizing...")
-        inp = self.discretize_data(inp, by_two)
+        inp = self.discretize_data(inp, by_two, silent=True)
     
         if check_negative:
             for i in range(numvars):
@@ -1036,7 +1071,71 @@ class Deterministic_Regressor:
         inp = [row[:-1] for row in inp]
              
             
-        return reg.optimize_params(inp, answer, solve_method=solve_method, elements_count_penalty=1.0)
+        return self.optimize_params(inp, answer, solve_method=solve_method, elements_count_penalty=1.0)
+    
+    def train_and_optimize_bulk(self, data_list, expected_answers, max_dnf_len=4, check_false=True, check_negative=False, error_tolerance=0.02, by_two=2, 
+                   min_match=3, use_approx_dnf=False, redundant_thresh=1.00, solve_method=["common", "union"], elements_count_penalty=1.0):
+
+        
+#         children = [Deterministic_Regressor()] * len(expected_answers)
+        self.children = [Deterministic_Regressor() for _ in range(len(expected_answers))]
+
+        for i in range(len(self.children)):
+            print("Child", i)
+            d_list = copy.deepcopy(data_list)
+            d_list[0].append("res")
+            for k in range(len(d_list)-1):
+                d_list[k+1].append(expected_answers[i][k])
+            self.children[i].train_and_optimize(data_list=d_list, max_dnf_len=max_dnf_len, check_false=check_false, check_negative=check_negative, error_tolerance=error_tolerance, by_two=by_two, min_match=min_match, use_approx_dnf=use_approx_dnf, redundant_thresh=redundant_thresh, solve_method=solve_method, elements_count_penalty=elements_count_penalty)
+
+            
+            
+    def solve_with_opt_bulk(self, inp_p):
+        res = []
+        for c in self.children:
+            r = c.solve_with_opt(inp_p)
+            if r == None or len(r) == 0:
+                r == [0] * (len(inp_p)-1)
+            res.append(r)
+            
+#         print([len(r) for r in res])
+        return res
+    
+    def solve_with_opt_class(self, inp_p):
+        
+        res = self.solve_with_opt_bulk(inp_p)
+        
+        for r in res:
+            print(r)
+        
+        dic_f1 = {i: self.children[i].opt_f1 for i in range(len(self.children))}
+        
+        print("Weights", dic_f1)
+        len_rows = len(res[0])
+        len_res = len(res)
+        new_res = [0] * len_rows
+        for i in range(len_rows):
+            numbers = [s[1] for s in sorted([(random.random()*dic_f1[i], i) for i in range(len_res)], reverse=True)]
+            for k in range(len(numbers)):
+                if res[numbers[k]][i] == 1:
+                    new_res[i] = numbers[k]
+                    break
+                if k == len(numbers) - 1:
+                    new_res[i] = numbers[k]
+
+        return new_res
+    
+    def train_and_optimize_class(self, data_list, expected_answers, max_dnf_len=4, check_false=True, check_negative=False, error_tolerance=0.02, by_two=2, 
+               min_match=3, use_approx_dnf=False, redundant_thresh=1.00, solve_method=["common", "union"], elements_count_penalty=1.0):
+        
+        answers = [[0 for _ in range(len(expected_answers))] for _ in range(max(expected_answers)+1)]
+        for i in range(len(answers[0])):
+            answers[expected_answers[i]][i] = 1
+        self.train_and_optimize_bulk(data_list=data_list, expected_answers=answers, max_dnf_len=max_dnf_len, check_false=check_false, 
+                    check_negative=check_negative, error_tolerance=error_tolerance, by_two=by_two, 
+                    min_match=min_match, use_approx_dnf=use_approx_dnf, redundant_thresh=redundant_thresh, solve_method=solve_method, elements_count_penalty=elements_count_penalty)
+    
+    
 
 
 
