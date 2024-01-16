@@ -1,6 +1,6 @@
 # Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 2.8.3
+# Version: 2.8.4
 # Date: 2024/01/15
 
 import itertools
@@ -249,8 +249,6 @@ class Deterministic_Regressor:
         print("Solver Expression:")
         
         print(self.replaceSegName(expr).replace("(n_", "(NOT ").replace(" n_", " NOT "))
-        print("expr", expr)
-        print("self.replaceSegName(expr)", self.replaceSegName(expr))
         
         self.last_solve_expression = expr
 
@@ -887,11 +885,10 @@ class Deterministic_Regressor:
 
             res = self.solve_direct(inp, false_clauses[0][1])
     
-#             precision = precision_score(answer, res)
-#             recall = recall_score(answer, res)
-#             f1 = f1_score(answer, res)
-#             best_ee = (f1 + min(precision,recall))/2
-#             best_ee = precision
+            precision = precision_score(answer, res)
+            recall = recall_score(answer, res)
+            f1 = f1_score(answer, res)
+            best_ee = (f1 + min(precision,recall))/2
             
                 
 #             print("optimize_max 2")
@@ -916,17 +913,17 @@ class Deterministic_Regressor:
                 res = self.solve_direct(inp, false_clauses[i][1])
                 conf_matrix = confusion_matrix(answer, res)
                 tn, fp, fn, tp = conf_matrix.ravel()
-#                 precision = precision_score(answer, res)
-#                 recall = recall_score(answer, res)
+                precision = precision_score(answer, res)
+                recall = recall_score(answer, res)
 #                 print("precision", precision)
 #                 print("recall", recall)
-#                 f1 = f1_score(answer, res)
-#                 ee = (f1 + min(precision,recall))/2
-#                 ee = precision
-#                 if best_ee < ee:
+                f1 = f1_score(answer, res)
+                ee = (f1 + min(precision,recall))/2
+                ee = precision
+                if best_ee < ee:
 #                 if min_fp > fp and (0.2 > fn/len(answer)):
-                if min_fp + min_fn > fp + fn:
-#                     best_ee = ee
+#                 if min_fp + min_fn > fp + fn:
+                    best_ee = ee
 
                     min_fp = fp
                     min_fn = fn
@@ -937,7 +934,7 @@ class Deterministic_Regressor:
                         false_best_expr = "(" + false_clauses[i][1] + ")"
                     else:
                         false_best_expr = false_best_expr + " | (" + false_clauses[i][1] + ")"
-        best_ee = 0   
+#         best_ee = 0   
 #         print("false_best_expr", false_best_expr)
         
         print("true DNF analysis started")
@@ -1046,7 +1043,7 @@ class Deterministic_Regressor:
         inp = [headers] + valid_data
            
         inp = [[Deterministic_Regressor.try_convert_to_numeric(inp[i][j]) for j in range(len(inp[i]))] for i in range(len(inp))]
-        inp = self.discretize_data(inp, by_two, silent=True)
+#         inp = self.discretize_data(inp, by_two, silent=True)
     
         if check_negative:
             for i in range(numvars):
@@ -1122,7 +1119,6 @@ class Deterministic_Regressor:
                     min_match=min_match, use_approx_dnf=use_approx_dnf, redundant_thresh=redundant_thresh, solve_method=solve_method, elements_count_penalty=elements_count_penalty)
     
     
-
 
 
 
