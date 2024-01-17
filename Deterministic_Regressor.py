@@ -1,6 +1,6 @@
 # Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 2.8.6
+# Version: 2.8.7
 # Date: 2024/01/17
 
 import itertools
@@ -486,7 +486,7 @@ class Deterministic_Regressor:
         inp = [[Deterministic_Regressor.try_convert_to_numeric(inp[i][j]) for j in range(len(inp[i]))] for i in range(len(inp))]
         return self.discretize_data(inp, by_two)
         
-    def train(self, file_path=None, data_list=None, max_dnf_len=4, check_false=True, check_negative=False, error_tolerance=0.02, by_two=2, min_match=0.03, use_approx_dnf=False, redundant_thresh=1.00):
+    def train(self, file_path=None, data_list=None, max_dnf_len=4, check_false=True, check_negative=False, error_tolerance=0.02, min_match=0.03, use_approx_dnf=False, redundant_thresh=1.00):
 
 # file_path: input file in tab-delimited text
 # check_negative: enable to check the negative conditions or not.  This one is very heavy.
@@ -1034,12 +1034,12 @@ class Deterministic_Regressor:
         split_index = len(rows) // divide_by  # Integer division for equal or near-equal halves
         return rows[:split_index], rows[split_index:]
 
-    def train_and_optimize(self, data_list=None, max_dnf_len=4, check_false=True, check_negative=False, error_tolerance=0.02, by_two=2, 
+    def train_and_optimize(self, data_list=None, max_dnf_len=4, check_false=True, check_negative=False, error_tolerance=0.02, 
                        min_match=0.03, use_approx_dnf=False, redundant_thresh=1.00, solve_method=["common", "union"], elements_count_penalty=1.0):
         
         print("Training started...")
         
-        self.by_two = by_two
+#         self.by_two = by_two
         
         headers = data_list[0]
         data_list2 = data_list[1:]
@@ -1049,7 +1049,7 @@ class Deterministic_Regressor:
         train_inp = [headers] + train_data
         
         self.train(data_list=train_inp, max_dnf_len=max_dnf_len, check_false=check_false, check_negative=check_negative, 
-                        error_tolerance=error_tolerance, by_two=by_two, min_match=min_match, use_approx_dnf=use_approx_dnf, redundant_thresh=redundant_thresh)
+                        error_tolerance=error_tolerance, min_match=min_match, use_approx_dnf=use_approx_dnf, redundant_thresh=redundant_thresh)
 
         print("Optimization started...")
         inp = [headers] + valid_data
@@ -1071,7 +1071,7 @@ class Deterministic_Regressor:
             
         return self.optimize_params(inp, answer, solve_method=solve_method, elements_count_penalty=1.0)
     
-    def train_and_optimize_bulk(self, data_list, expected_answers, max_dnf_len=4, check_false=True, check_negative=False, error_tolerance=0.02, by_two=2, 
+    def train_and_optimize_bulk(self, data_list, expected_answers, max_dnf_len=4, check_false=True, check_negative=False, error_tolerance=0.02,  
                    min_match=0.03, use_approx_dnf=False, redundant_thresh=1.00, solve_method=["common", "union"], elements_count_penalty=1.0):
 
         self.children = [Deterministic_Regressor() for _ in range(len(expected_answers))]
@@ -1085,7 +1085,7 @@ class Deterministic_Regressor:
             
             for k in range(len(d_list)-1):
                 d_list[k+1].append(expected_answers[i][k])
-            self.children[i].train_and_optimize(data_list=d_list, max_dnf_len=max_dnf_len, check_false=check_false, check_negative=check_negative, error_tolerance=error_tolerance, by_two=by_two, min_match=min_match, use_approx_dnf=use_approx_dnf, redundant_thresh=redundant_thresh, solve_method=solve_method, elements_count_penalty=elements_count_penalty)
+            self.children[i].train_and_optimize(data_list=d_list, max_dnf_len=max_dnf_len, check_false=check_false, check_negative=check_negative, error_tolerance=error_tolerance, min_match=min_match, use_approx_dnf=use_approx_dnf, redundant_thresh=redundant_thresh, solve_method=solve_method, elements_count_penalty=elements_count_penalty)
 
             
             
@@ -1120,14 +1120,14 @@ class Deterministic_Regressor:
 
         return new_res
     
-    def train_and_optimize_class(self, data_list, expected_answers, max_dnf_len=4, check_false=True, check_negative=False, error_tolerance=0.02, by_two=2, 
+    def train_and_optimize_class(self, data_list, expected_answers, max_dnf_len=4, check_false=True, check_negative=False, error_tolerance=0.02, 
                min_match=0.03, use_approx_dnf=False, redundant_thresh=1.00, solve_method=["common", "union"], elements_count_penalty=1.0):
         
         answers = [[0 for _ in range(len(expected_answers))] for _ in range(max(expected_answers)+1)]
         for i in range(len(answers[0])):
             answers[expected_answers[i]][i] = 1
         self.train_and_optimize_bulk(data_list=data_list, expected_answers=answers, max_dnf_len=max_dnf_len, check_false=check_false, 
-                    check_negative=check_negative, error_tolerance=error_tolerance, by_two=by_two, 
+                    check_negative=check_negative, error_tolerance=error_tolerance, 
                     min_match=min_match, use_approx_dnf=use_approx_dnf, redundant_thresh=redundant_thresh, solve_method=solve_method, elements_count_penalty=elements_count_penalty)
     
     def prepropcess(self, whole_rows, by_two):
