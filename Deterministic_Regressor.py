@@ -1,6 +1,6 @@
 # Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 2.8.7
+# Version: 2.8.8
 # Date: 2024/01/17
 
 import itertools
@@ -568,7 +568,8 @@ class Deterministic_Regressor:
         for i in range(1, len(inp), 1):
             s = ""
             for j in range(len(inp[i]) - 1):
-                s += str(inp[i][j])
+#                 s += str(inp[i][j])
+                s += str(int(inp[i][j]))
             truefalse = inp[i][len(inp[i]) - 1]
             dic[int(s, 2)] = truefalse
             if truefalse == '1':
