@@ -1,6 +1,6 @@
 # Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 2.8.8
+# Version: 2.8.9
 # Date: 2024/01/17
 
 import itertools
@@ -484,7 +484,10 @@ class Deterministic_Regressor:
     
     def clean_and_discretize(self, inp, by_two):
         inp = [[Deterministic_Regressor.try_convert_to_numeric(inp[i][j]) for j in range(len(inp[i]))] for i in range(len(inp))]
-        return self.discretize_data(inp, by_two)
+#         return self.discretize_data(inp, by_two)
+        matrix = self.discretize_data(inp, by_two)
+        head = matrix[0]
+        return [head] + [[int(mm) for mm in m] for m in matrix[1:]]
         
     def train(self, file_path=None, data_list=None, max_dnf_len=4, check_false=True, check_negative=False, error_tolerance=0.02, min_match=0.03, use_approx_dnf=False, redundant_thresh=1.00):
 
