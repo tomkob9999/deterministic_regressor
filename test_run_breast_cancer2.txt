@@ -42,7 +42,7 @@ reg.prepropcess(data_list, by_two=3)
 print("prepropcess() finished", measure(start_time))
 start_time = time.time()
 
-inp = reg.train_and_optimize(data_list=reg.get_train_datres_with_head(), error_tolerance=0.03, max_dnf_len=2, by_two=2, min_match=0.03)
+inp = reg.train_and_optimize(data_list=reg.get_train_datres_with_head(), error_tolerance=0.03, max_dnf_len=2, min_match=0.03)
 
 print("train_and_optimize() finished", measure(start_time))
 start_time = time.time()# # print(inp)
