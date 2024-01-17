@@ -1,6 +1,6 @@
 # Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 2.8.9
+# Version: 2.9.1
 # Date: 2024/01/17
 
 import itertools
@@ -828,7 +828,7 @@ class Deterministic_Regressor:
                     print(f"Precision: {precision * 100:.2f}%")
                     print(f"Recall: {recall * 100:.2f}%")
                     print(f"F1 Score: {f1 * 100:.2f}%")
-                    ee = (f1 +min(precision,recall))/2-(len(self.last_solve_expression.split("&"))+len(self.last_solve_expression.split("|")))/4000*elements_count_penalty
+                    ee = (f1 +min(precision,recall))/2-(len(self.last_solve_expression.split("&"))+len(self.last_solve_expression.split("|")))/3000*elements_count_penalty
                     print(f"Effectiveness & Efficiency Score: {ee * 100:.3f}%")
                     if best_ee < ee:
                         best_ee = ee
@@ -883,7 +883,7 @@ class Deterministic_Regressor:
                 
                 return win_option_sofar, ct_opt
 
-    def optimize_compact(self, test_data, answer, cnt_out=5):
+    def optimize_compact(self, test_data, answer, cnt_out=8):
 
         inp = test_data
         
@@ -978,6 +978,10 @@ class Deterministic_Regressor:
             
 #             print("try true expr", expr)
             res = self.solve_direct(inp, expr)
+    
+            conf_matrix = confusion_matrix(answer, res)
+            tn, fp, fn, tp = conf_matrix.ravel()
+            
             precision = precision_score(answer, res)
             recall = recall_score(answer, res)
             f1 = f1_score(answer, res)
@@ -1013,7 +1017,7 @@ class Deterministic_Regressor:
 
             if len(res) > 0:
                 print("")
-                print("#### NICE COMPACT EXPRESSION FOUND! ####")
+                print("#### DERIVED OPTIMUM EXPRESSION ####")
                 print("")
                 precision = precision_score(answer, res)
                 recall = recall_score(answer, res)
@@ -1021,16 +1025,17 @@ class Deterministic_Regressor:
                 print(f"Precision: {precision * 100:.2f}%")
                 print(f"Recall: {recall * 100:.2f}%")
                 print(f"F1 Score: {f1 * 100:.2f}%")
-                
-                print("")
 
                 self.opt_f1 = f1
                 
                 print(self.replaceSegName(final_expr).replace("(n_", "(NOT ").replace(" n_", " NOT "))
                 
+                print("")
+                
                 self.expression_opt = final_expr
                 
                 return final_expr
+            
             
     def random_split_matrix(matrix, divide_by=2):
         rows = list(matrix)  # Convert to list for easier shuffling
@@ -1039,7 +1044,8 @@ class Deterministic_Regressor:
         return rows[:split_index], rows[split_index:]
 
     def train_and_optimize(self, data_list=None, max_dnf_len=4, check_false=True, check_negative=False, error_tolerance=0.02, 
-                       min_match=0.03, use_approx_dnf=False, redundant_thresh=1.00, solve_method=["common", "union"], elements_count_penalty=1.0):
+                       min_match=0.03, use_approx_dnf=False, redundant_thresh=1.00, solve_method=["common", "union"], elements_count_penalty=1.0, 
+                           use_compact_opt=False, cnt_out=8):
         
         print("Training started...")
         
@@ -1072,11 +1078,13 @@ class Deterministic_Regressor:
         answer = [int(inp[i][-1]) for i in range(1, len(inp), 1)]
         inp = [row[:-1] for row in inp]
              
-            
-        return self.optimize_params(inp, answer, solve_method=solve_method, elements_count_penalty=1.0)
+        if use_compact_opt:
+            return self.optimize_compact(inp, answer, cnt_out=cnt_out)
+        else:
+            return self.optimize_params(inp, answer, solve_method=solve_method, elements_count_penalty=1.0)
     
     def train_and_optimize_bulk(self, data_list, expected_answers, max_dnf_len=4, check_false=True, check_negative=False, error_tolerance=0.02,  
-                   min_match=0.03, use_approx_dnf=False, redundant_thresh=1.00, solve_method=["common", "union"], elements_count_penalty=1.0):
+                   min_match=0.03, use_approx_dnf=False, redundant_thresh=1.00, solve_method=["common", "union"], elements_count_penalty=1.0, use_compact_opt=False, cnt_out=8):
 
         self.children = [Deterministic_Regressor() for _ in range(len(expected_answers))]
 
@@ -1089,7 +1097,9 @@ class Deterministic_Regressor:
             
             for k in range(len(d_list)-1):
                 d_list[k+1].append(expected_answers[i][k])
-            self.children[i].train_and_optimize(data_list=d_list, max_dnf_len=max_dnf_len, check_false=check_false, check_negative=check_negative, error_tolerance=error_tolerance, min_match=min_match, use_approx_dnf=use_approx_dnf, redundant_thresh=redundant_thresh, solve_method=solve_method, elements_count_penalty=elements_count_penalty)
+            self.children[i].train_and_optimize(data_list=d_list, max_dnf_len=max_dnf_len, check_false=check_false, check_negative=check_negative, error_tolerance=error_tolerance, 
+                    min_match=min_match, use_approx_dnf=use_approx_dnf, redundant_thresh=redundant_thresh, solve_method=solve_method, 
+                                                elements_count_penalty=elements_count_penalty, use_compact_opt=use_compact_opt, cnt_out=cnt_out)
 
             
             
@@ -1125,23 +1135,26 @@ class Deterministic_Regressor:
         return new_res
     
     def train_and_optimize_class(self, data_list, expected_answers, max_dnf_len=4, check_false=True, check_negative=False, error_tolerance=0.02, 
-               min_match=0.03, use_approx_dnf=False, redundant_thresh=1.00, solve_method=["common", "union"], elements_count_penalty=1.0):
+               min_match=0.03, use_approx_dnf=False, redundant_thresh=1.00, solve_method=["common", "union"], elements_count_penalty=1.0, use_compact_opt=False, cnt_out=10):
         
         answers = [[0 for _ in range(len(expected_answers))] for _ in range(max(expected_answers)+1)]
         for i in range(len(answers[0])):
             answers[expected_answers[i]][i] = 1
         self.train_and_optimize_bulk(data_list=data_list, expected_answers=answers, max_dnf_len=max_dnf_len, check_false=check_false, 
                     check_negative=check_negative, error_tolerance=error_tolerance, 
-                    min_match=min_match, use_approx_dnf=use_approx_dnf, redundant_thresh=redundant_thresh, solve_method=solve_method, elements_count_penalty=elements_count_penalty)
+                    min_match=min_match, use_approx_dnf=use_approx_dnf, redundant_thresh=redundant_thresh, solve_method=solve_method, 
+                                     elements_count_penalty=elements_count_penalty, use_compact_opt=use_compact_opt, cnt_out=cnt_out)
     
-    def prepropcess(self, whole_rows, by_two):
+    def prepropcess(self, whole_rows, by_two, splitter=3):
         self.whole_rows = self.clean_and_discretize(whole_rows, by_two)
         headers = self.whole_rows
         data = self.whole_rows[1:]
         random.shuffle(data)  # Shuffle rows in-place
-        split_index = len(data) // 3  # Integer division for equal or near-equal halves
+        split_index = len(data) // splitter  # Integer division for equal or near-equal halves
         self.test_rows = data[:split_index]
+        print("len(self.test_rows)", len(self.test_rows))
         self.train_rows = data[split_index:]
+        print("len(self.train_rows)", len(self.train_rows))
     
     def get_train_dat_wo_head(self):
         return [row[:-1] for row in self.train_rows]
