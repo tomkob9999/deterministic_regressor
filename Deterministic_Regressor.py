@@ -1,6 +1,6 @@
 # Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 2.9.1
+# Version: 2.9.2
 # Date: 2024/01/17
 
 import itertools
@@ -1181,4 +1181,24 @@ class Deterministic_Regressor:
         return self.test_rows[1:]
     def get_test_datres_with_head(self):
         return [self.whole_rows[0]] + self.test_rows
+    
+
+    def show_stats(predicted, actual, average="binary", elements_count_penalty=1.0):
+        
+        answer = actual
+        res = predicted
+        
+        precision = precision_score(answer, res, average=average)
+        recall = recall_score(answer, res, average=average)
+        f1 = f1_score(answer, res, average=average)
+        print("")
+        print("####### PREDICTION STATS #######")
+        print("")
+        print(f"Precision: {precision * 100:.2f}%")
+        print(f"Recall: {recall * 100:.2f}%")
+        print(f"F1 Score: {f1 * 100:.2f}%")
+        print("")
+        print("##############")
+        print("")
+
     

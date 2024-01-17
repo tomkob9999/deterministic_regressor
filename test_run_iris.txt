@@ -45,11 +45,12 @@ reg = Deterministic_Regressor()
 print("Deterministic_Regressor() finished", measure(start_time))
 start_time = time.time()
 
-reg.prepropcess(data_list, by_two=3)
+reg.prepropcess(data_list, by_two=3, splitter=4)
 print("prepropcess() finished", measure(start_time))
 start_time = time.time()
 
-reg.train_and_optimize_class(data_list=reg.get_train_dat_with_head(), expected_answers=reg.get_train_res_wo_head(), error_tolerance=0.00, max_dnf_len=4, min_match=0.03, solve_method=["union", "common"])
+reg.train_and_optimize_class(data_list=reg.get_train_dat_with_head(), expected_answers=reg.get_train_res_wo_head(), error_tolerance=0.00, max_dnf_len=4, min_match=0.03, 
+                             solve_method=["union", "common"], use_compact_opt=True, cnt_out=20)
 print("train_and_optimize_class() finished", measure(start_time))
 start_time = time.time()
 
@@ -58,20 +59,4 @@ print("solve_with_opt_class() finished", measure(start_time))
 start_time = time.time()
 
 answer = reg.get_test_res_wo_head()
-
-
-if len(res) > 0:
-    print("Predicted")
-    print(res)
-    print("Actual")
-    print(answer)
-
-
-    precision = precision_score(answer, res, average='weighted')
-    recall = recall_score(answer, res, average='weighted')
-    f1 = f1_score(answer, res, average='weighted')
-
-    print(f"Precision: {precision * 100:.2f}%")
-    print(f"Recall: {recall * 100:.2f}%")
-    print(f"F1 Score: {f1 * 100:.2f}%")
-
+Deterministic_Regressor.show_stats(res, answer, average="weighted")
