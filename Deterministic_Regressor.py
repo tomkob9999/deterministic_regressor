@@ -1,7 +1,7 @@
 # Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 2.9.2
-# Date: 2024/01/17
+# Version: 2.9.3
+# Date: 2024/01/21
 
 import itertools
 from sympy.logic import boolalg
@@ -926,7 +926,8 @@ class Deterministic_Regressor:
                     print(str(i) + "/" + str(len(false_clauses)) + " completed" )
 
                 expr = false_best_expr + " & " + false_clauses[i][1]
-                res = self.solve_direct(inp, false_clauses[i][1])
+#                 res = self.solve_direct(inp, false_clauses[i][1])
+                res = self.solve_direct(inp, expr)
                 conf_matrix = confusion_matrix(answer, res)
                 tn, fp, fn, tp = conf_matrix.ravel()
                 precision = precision_score(answer, res)
