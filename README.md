@@ -1,5 +1,8 @@
 # Deterministic Logic Regression Model
 
+Deterministic_Regressor.py - main
+Deterministic_Regressor_Unified.py - experimental
+
 This is a deductive ML model based on deterministic approach unlike much of existing models that are stochastic and search for the trend or cleanest divider using the minimum sums of euclidean distances, optimization models using derivatives, etc.  This model instead searches for the logical expression that determins the final true/false decisions.  The existing models cannot seem overcome the complexity of AND/OR relationships of input variables even though ensemble or multi-kernel models like random forests or neural network are able to capture, but they seem to be more of randomized effects than nailing precisely.
 
 One of the advantages, maybe the biggest, is that this derived trained model is 100% explicit and understandable, which is very foreign to regular ML models where the trained models are almost black-box or hardly human understandable.  The derived bool expressions are totally independent from the tool, and they can be analyzed, manually modified or even can be used on any programming languages, or even Excel equations.
