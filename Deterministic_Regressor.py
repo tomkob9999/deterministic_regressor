@@ -1,6 +1,6 @@
 # Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 2.9.3
+# Version: 3.0.0
 # Date: 2024/01/21
 
 import itertools
@@ -23,13 +23,14 @@ class Deterministic_Regressor:
         self.expression_false = ""
         self.true_confidence = {}
         self.false_confidence = {}
+        self.all_confidence = {}
         
         self.tokens = []
         self.dic_segments = {}
         
         self.last_solve_expression = ""
         
-        self.check_negative=False
+#         self.check_negative=False
         
         self.expression_opt = ""
         self.by_two = -1
@@ -121,7 +122,8 @@ class Deterministic_Regressor:
             
         
 #     def solve(self, inp_p, check_negative=True, use_expression="union", confidence_thresh=3, power_level=None):
-    def solve(self, inp_p, use_expression="union", confidence_thresh=3, power_level=None):
+#     def solve(self, inp_p, use_expression="union", confidence_thresh=3, power_level=None):
+    def solve(self, inp_p, confidence_thresh=3, power_level=None):
         
         inp = [[Deterministic_Regressor.try_convert_to_numeric(inp_p[i][j]) for j in range(len(inp_p[i]))] for i in range(len(inp_p))]
         
@@ -170,13 +172,13 @@ class Deterministic_Regressor:
         
         numvars = len(inp[0])
 
-        if self.check_negative:
-            for i in range(numvars):
-                inp[0].insert(i+numvars, "n_" + inp[0][i])
-            for j in range(1, len(inp), 1):
-                for i in range(numvars):
-                    inp[j].insert(i+numvars,0 if inp[j][i] == 1 else 1)
-            numvars *= 2
+#         if self.check_negative:
+#             for i in range(numvars):
+#                 inp[0].insert(i+numvars, "n_" + inp[0][i])
+#             for j in range(1, len(inp), 1):
+#                 for i in range(numvars):
+#                     inp[j].insert(i+numvars,0 if inp[j][i] == 1 else 1)
+#             numvars *= 2
 
         tokens = inp[0]
         inp_list = [row for row in inp[1:]]
@@ -202,7 +204,7 @@ class Deterministic_Regressor:
             true_exp = " | ".join(true_list)
             
             false_list = []
-            for s in false_exp.split("&"):
+            for s in false_exp.split("|"):
                 s = s.strip()
                 if s in self.false_confidence:
                     if self.false_confidence[s] >= false_confidence_thresh:
@@ -211,62 +213,75 @@ class Deterministic_Regressor:
                 else:
                     false_list.append(s)
                     active_false_clauses += 1
-            false_exp = " & ".join(false_list)
+            false_exp = " | ".join(false_list)
         else:
             active_true_clauses = len(true_exp.split("|"))
-            active_false_clauses = len(false_exp.split("&"))
+            active_false_clauses = len(false_exp.split("|"))
             
-        if use_expression == "true":
-            if true_exp == "":
-                print("The true expression is not available")
-                return []
-            expr = true_exp
-            print(str(active_true_clauses) + " true clauses activated")
-        elif use_expression == "false":
-            if false_exp == "":
-                print("The false expression is not available")
-                return []
-            expr = false_exp
-            print(str(active_false_clauses) + " false clauses activated")
-        elif use_expression == "common":
-            if true_exp == "":
-                print("The true expression is not available")
-                return []
-            if false_exp == "":
-                print("The false expression is not available")
-                return []
-            expr = "(" + true_exp + ") & (" + false_exp + ")"
-            print(str(active_true_clauses) + " true clauses activated")
-            print(str(active_false_clauses) + " false clauses activated")
-        else: # union case
-            if true_exp == "":
-                print("The true expression is not available")
-                return []
-            if false_exp == "":
-                print("The false expression is not available")
-                return []
-            expr = "(" + true_exp + ") | (" + false_exp + ")"
-            print(str(active_true_clauses) + " true clauses activated")
-            print(str(active_false_clauses) + " false clauses activated")
+#         if use_expression == "true":
+#             if true_exp == "":
+#                 print("The true expression is not available")
+#                 return []
+#             expr = true_exp
+#             print(str(active_true_clauses) + " true clauses activated")
+#         elif use_expression == "false":
+#             if false_exp == "":
+#                 print("The false expression is not available")
+#                 return []
+#             expr = false_exp
+#             print(str(active_false_clauses) + " false clauses activated")
+#         elif use_expression == "common":
+#             if true_exp == "":
+#                 print("The true expression is not available")
+#                 return []
+#             if false_exp == "":
+#                 print("The false expression is not available")
+#                 return []
+#             expr = "(" + true_exp + ") & (" + false_exp + ")"
+#             print(str(active_true_clauses) + " true clauses activated")
+#             print(str(active_false_clauses) + " false clauses activated")
+#         else: # union case
+#             if true_exp == "":
+#                 print("The true expression is not available")
+#                 return []
+#             if false_exp == "":
+#                 print("The false expression is not available")
+#                 return []
+#             expr = "(" + true_exp + ") | (" + false_exp + ")"
+#             print(str(active_true_clauses) + " true clauses activated")
+#             print(str(active_false_clauses) + " false clauses activated")
 
-
+        if true_exp != "":
+            expr = "(" + true_exp + ")"
+        if true_exp != "" and false_exp != "":
+            expr = expr + " & "
+        if false_exp != "":
+            expr = expr + "not (" + false_exp + ")"
+            
+        print(str(active_true_clauses) + " true clauses activated")
+        print(str(active_false_clauses) + " false clauses activated")
+            
+        expr = expr.replace(" & ", " and ").replace(" | ", " or ")
         print("Solver Expression:")
         
-        print(self.replaceSegName(expr).replace("(n_", "(NOT ").replace(" n_", " NOT "))
+#         print(self.replaceSegName(expr).replace("(n_", "(NOT ").replace(" n_", " NOT "))
+        print(self.replaceSegName(expr))
         
         self.last_solve_expression = expr
 
+        
         for i in range(len(inp_list)):
             res[i] = Deterministic_Regressor.myeval(inp_list[i], tokens, expr)
             
         if res is None:
             return []
         
-        return res
+        return [1 if r or r == 1 else 0 for r in res]
     
         
     def solve_direct(self, inp_p, expression):
         
+        expression = expression.replace(" | ", " or ").replace(" & ", " and ")
         self.last_solve_expression = expression
            
         inp = copy.deepcopy(inp_p)
@@ -276,13 +291,13 @@ class Deterministic_Regressor:
 
         numvars = len(inp[0])
 
-        if self.check_negative:
-            for i in range(numvars):
-                inp[0].insert(i+numvars, "n_" + inp[0][i])
-            for j in range(1, len(inp), 1):
-                for i in range(numvars):
-                    inp[j].insert(i+numvars,0 if inp[j][i] == 1 else 1)
-            numvars *= 2
+#         if self.check_negative:
+#             for i in range(numvars):
+#                 inp[0].insert(i+numvars, "n_" + inp[0][i])
+#             for j in range(1, len(inp), 1):
+#                 for i in range(numvars):
+#                     inp[j].insert(i+numvars,0 if inp[j][i] == 1 else 1)
+#             numvars *= 2
 
 #         print("inp[0]", inp[0])
         
@@ -489,7 +504,8 @@ class Deterministic_Regressor:
         head = matrix[0]
         return [head] + [[int(mm) for mm in m] for m in matrix[1:]]
         
-    def train(self, file_path=None, data_list=None, max_dnf_len=4, check_false=True, check_negative=False, error_tolerance=0.02, min_match=0.03, use_approx_dnf=False, redundant_thresh=1.00):
+#     def train(self, file_path=None, data_list=None, max_dnf_len=4, check_false=True, check_negative=False, error_tolerance=0.02, min_match=0.03, use_approx_dnf=False, redundant_thresh=1.00):
+    def train(self, file_path=None, data_list=None, max_dnf_len=4, error_tolerance=0.02, min_match=0.03, use_approx_dnf=False, redundant_thresh=1.00):
 
 # file_path: input file in tab-delimited text
 # check_negative: enable to check the negative conditions or not.  This one is very heavy.
@@ -522,24 +538,18 @@ class Deterministic_Regressor:
                     return []
         
         imp_before_row_reduction = copy.deepcopy(inp)
-# # # ############## COMMENT OUT UNLESS TESTING ############## 
-#         CUT_PCT = 90
-#         print("NUM RECS BEFORE REDUCTION FOR TEST", len(inp))
-#         inp = Deterministic_Regressor.reduce_rows_except_first(inp, CUT_PCT)
-#         print("NUM RECS AFTER REDUCTION FOR TEST", len(inp))
-# # ############## COMMENT OUT UNLESS TESTING ############## 
 
-        self.check_negative = check_negative
+#         self.check_negative = check_negative
         
         numvars = len(inp[1])-1
         
-        if check_negative:
-            for i in range(numvars):
-                inp[0].insert(i+numvars, "n_" + inp[0][i])
-            for j in range(1, len(inp), 1):
-                for i in range(numvars):
-                    inp[j].insert(i+numvars, 0 if inp[j][i] == 1 else 1)
-            numvars *= 2
+#         if check_negative:
+#             for i in range(numvars):
+#                 inp[0].insert(i+numvars, "n_" + inp[0][i])
+#             for j in range(1, len(inp), 1):
+#                 for i in range(numvars):
+#                     inp[j].insert(i+numvars, 0 if inp[j][i] == 1 else 1)
+#             numvars *= 2
 
         print("Columns:")
         print(inp[0])
@@ -562,194 +572,264 @@ class Deterministic_Regressor:
         if max_dnf_len > numvars - 1:
             max_dnf_len = numvars - 1
         
-        dic = dict()
+#         dic = dict()
                     
-        dic_opp = dict()
+#         dic_opp = dict()
         
-        true_list = []
-        false_list = []
-        for i in range(1, len(inp), 1):
-            s = ""
-            for j in range(len(inp[i]) - 1):
-#                 s += str(inp[i][j])
-                s += str(int(inp[i][j]))
-            truefalse = inp[i][len(inp[i]) - 1]
-            dic[int(s, 2)] = truefalse
-            if truefalse == '1':
-                true_list.append(s)
-            else:
-                false_list.append(s)
+#         true_list = []
+#         false_list = []
+#         for i in range(1, len(inp), 1):
+#             s = ""
+#             for j in range(len(inp[i]) - 1):
+# #                 s += str(inp[i][j])
+#                 s += str(int(inp[i][j]))
+#             truefalse = inp[i][len(inp[i]) - 1]
+#             dic[int(s, 2)] = truefalse
+#             if truefalse == '1':
+#                 true_list.append(s)
+#             else:
+#                 false_list.append(s)
 
-        inp_oppo = [copy.deepcopy(inp[0])] + [[0 if m == 1 else 1 for m in inp[i]] for i in range(1, len(inp), 1)]
-        for i in range(1, len(inp_oppo), 1):
-            s = ""
-            for j in range(len(inp_oppo[i]) - 1):
-                s += str(inp_oppo[i][j])
-            truefalse = inp_oppo[i][len(inp_oppo[i]) - 1]
-            dic_opp[int(s, 2)] = truefalse
+#         inp_oppo = [copy.deepcopy(inp[0])] + [[0 if m == 1 else 1 for m in inp[i]] for i in range(1, len(inp), 1)]
+#         for i in range(1, len(inp_oppo), 1):
+#             s = ""
+#             for j in range(len(inp_oppo[i]) - 1):
+#                 s += str(inp_oppo[i][j])
+#             truefalse = inp_oppo[i][len(inp_oppo[i]) - 1]
+#             dic_opp[int(s, 2)] = truefalse
 
                 
         MAX_REPS = 1500000
         
-        print("Deriving true expressions...")
+        print("Deriving expressions...")
         dnf_perf = list()
         raw_perf = list()
         raw_perf2 = list()
-
-        for s in range(max_dnf_len):
-            len_dnf = s + 1
-            
-            l = [ii for ii in range(numvars)]
-            p_list = list(itertools.combinations(l, len_dnf))
-            
-            p_list = [p for p in p_list if not any([pp in redundant_cols for pp in p])]
-            
-            print(str(len_dnf) + " variable patterns")
-            if len(p_list) > MAX_REPS:
-                print("Skipping because " + str(len(p_list)) + " combinations is too many")
-                break
-            true_test_pass = True
-            for i in range(len(p_list)):
-                match_and_break = False
-                b = Deterministic_Regressor.convTuple2bin(p_list[i], numvars)
-                for p in raw_perf2:
-                    if p == b & p:
-                        match_and_break = True
-                        break
-                if match_and_break:
-                    continue
-                r = [v for k,v in dic.items() if k & b == b]
-                if len(r) == 0:
-                    continue
-                cnt_all = len([f for f in r])
-                cnt_unmatch = len([f for f in r if f == 0])
-                if cnt_unmatch/cnt_all > error_tolerance:
-                    continue
-#                 if cnt_all - cnt_unmatch < min_match:
-                if (cnt_all - cnt_unmatch)/numrows < min_match:
-                    continue
-
-                raw_perf.append([ii for ii in p_list[i]])
-                raw_perf2.append(b)
-
-                self.true_confidence["(" + " & ".join(sorted(list(set([inp[0][ii] for ii in p_list[i]])))) + ")"] = cnt_all - cnt_unmatch
-        
-        
-        for dn in raw_perf:
-            dnf_perf.append(sorted(list(set([inp[0][ii] for ii in dn]))))
-                
-        
-        print("size of true dnf " + str(len(dnf_perf)))
-        
-        print("Deriving false expressions...")
         dnf_perf_n = list()
         raw_perf_n = list()
         raw_perf2_n = list()
-        if check_false:
-            if check_negative:
-                for s in range(max_dnf_len):
-                    len_dnf = s + 1
-                    l = [ii for ii in range(numvars)]
-                    p_list = list(itertools.combinations(l, len_dnf))
-                    
-                    p_list = [p for p in p_list if not any([pp in redundant_cols for pp in p])]
-            
-                    print(str(len_dnf) + " variable patterns")
-                    if len(p_list) > MAX_REPS:
-                        print("Skipping because " + str(len(p_list)) + " combinations is too many")
-                        break
 
-                    true_test_pass = True
-                    for i in range(len(p_list)):
-                        match_and_break = False
-                        b = Deterministic_Regressor.convTuple2bin(p_list[i], numvars)
-                        for p in raw_perf2_n:
-                            if p == b & p:
-                                match_and_break = True
-                                break
-                        if match_and_break:
-                            continue
-                        r = [v for k,v in dic.items() if k & b == b]
-                        if len(r) == 0:
-                            continue
-                        cnt_all = len([f for f in r])
-                        cnt_unmatch = len([f for f in r if f == 1])
-                        if cnt_unmatch/cnt_all > error_tolerance:
-                            continue
-
-#                         if cnt_all - cnt_unmatch < min_match:
-                        if (cnt_all - cnt_unmatch)/numrows < min_match:
-                            continue
-                            
-                        raw_perf_n.append([ii for ii in p_list[i]])
-                        raw_perf2_n.append(b)       
-                        self.false_confidence["(" + " | ".join(sorted(list(set([inp[0][ii][2:] if inp[0][ii][0:2] == "n_" else "n_" + inp[0][ii] for ii in p_list[i]])))) + ")"] = cnt_all - cnt_unmatch
+        for pattern in [(1, 1), (0, 1), (1, 0), (0, 0)]:
+#             print("pattern", pattern)
+            dat_t = []
+            if pattern[0] == 1:
+                dat_t = [row[:-1] for row in inp[1:]]
             else:
-                for s in range(max_dnf_len):
-                    len_dnf = s + 1
+                dat_t = [[0 if m == 1 else 1 for m in row[:-1]] for row in inp[1:]]
+                
+#             print("dat_t[:5]", dat_t[:5])
+            res_t = []
+            if pattern[1] == 1:
+                res_t = [row[-1] for row in inp[1:]]
+            else:
+                res_t = [0 if row[-1] == 1 else 1 for row in inp[1:]]
+                         
+#             print("res_t", res_t)
+            inp_t = [copy.deepcopy(inp[0])] + [dat_t[i] + [res_t[i]] for i in range(len(dat_t))]
+#             print("inp_t", inp_t)
+            dic_t = dict()
+            for i in range(1, len(inp_t), 1):
+                s = ""
+                for j in range(len(inp_t[i]) - 1):
+                    s += str(int(inp_t[i][j]))
+                truefalse = inp_t[i][len(inp_t[i]) - 1]
+                dic_t[int(s, 2)] = truefalse
 
-                    l = [ii for ii in range(numvars)]
-                    p_list = list(itertools.combinations(l, len_dnf))
-                    
-                    p_list = [p for p in p_list if not any([pp in redundant_cols for pp in p])]
-                    
-                    print(str(len_dnf) + " variable patterns")
-                    if len(p_list) > MAX_REPS:
-                        print("Skipping because " + str(len(p_list)) + " combinations is too many")
-                        break
-                    true_test_pass = True
-                    for i in range(len(p_list)):
-                        match_and_break = False
-                        b = Deterministic_Regressor.convTuple2bin(p_list[i], numvars)
+                
+            for s in range(max_dnf_len):
+                len_dnf = s + 1
+
+                l = [ii for ii in range(numvars)]
+                p_list = list(itertools.combinations(l, len_dnf))
+
+                p_list = [p for p in p_list if not any([pp in redundant_cols for pp in p])]
+
+                print(str(len_dnf) + " variable patterns")
+                if len(p_list) > MAX_REPS:
+                    print("Skipping because " + str(len(p_list)) + " combinations is too many")
+                    break
+                true_test_pass = True
+                for i in range(len(p_list)):
+                    match_and_break = False
+                    b = Deterministic_Regressor.convTuple2bin(p_list[i], numvars)
+                    if pattern[1] == 1:
+                        for p in raw_perf2:
+                            if p == b & p:
+                                match_and_break = True
+                                break
+                    else:
                         for p in raw_perf2_n:
                             if p == b & p:
                                 match_and_break = True
                                 break
-                        if match_and_break:
-                            continue
-                        r = [v for k,v in dic_opp.items() if k & b == b]
-                        if len(r) == 0:
-                            continue
-                        cnt_all = len([f for f in r])
-                        cnt_unmatch = len([f for f in r if f == 0])
-                        if cnt_unmatch/cnt_all > error_tolerance:
-                            continue
+                    if match_and_break:
+                        continue
+                    r = [v for k,v in dic_t.items() if k & b == b]
+                    if len(r) == 0:
+                        continue
+                    cnt_all = len([f for f in r])
+                    cnt_unmatch = len([f for f in r if f == 0])
+                    if cnt_unmatch/cnt_all > error_tolerance:
+                        continue
+    #                 if cnt_all - cnt_unmatch < min_match:
+                    if (cnt_all - cnt_unmatch)/numrows < min_match:
+                        continue
 
-#                         if cnt_all - cnt_unmatch < min_match:
-                        if (cnt_all - cnt_unmatch)/numrows < min_match:
-                            continue
-                            
+                    if pattern[1] == 1:
+                        raw_perf.append([ii for ii in p_list[i]])
+                        raw_perf2.append(b)
+
+                        if pattern[0] == 1:
+                            key = "(" + " & ".join(sorted(list(set([inp[0][ii] for ii in p_list[i]])))) + ")"
+                            dnf_perf.append(sorted(list(set([inp[0][ii] for ii in p_list[i]]))))
+                        else:
+                            key = "(not " + " & not ".join(sorted(list(set([inp[0][ii] for ii in p_list[i]])))) + ")" 
+                            dnf_perf.append(sorted(list(set(["not " + inp[0][ii] for ii in p_list[i]]))))
+                        self.true_confidence[key] = cnt_all - cnt_unmatch
+                        
+#                         print("add to true", key)
+                    else:
                         raw_perf_n.append([ii for ii in p_list[i]])
                         raw_perf2_n.append(b)  
-                        self.false_confidence["(" + " | ".join(sorted(list(set([inp[0][ii] for ii in p_list[i]])))) + ")"] = cnt_all - cnt_unmatch
+                        if pattern[0] == 1:
+                            key = "(" + " & ".join(sorted(list(set([inp[0][ii] for ii in p_list[i]])))) + ")"
+                            dnf_perf_n.append(sorted(list(set([inp[0][ii] for ii in p_list[i]]))))
+                        else:
+                            key = "(not " + " & not ".join(sorted(list(set([inp[0][ii] for ii in p_list[i]])))) + ")" 
+                            dnf_perf_n.append(sorted(list(set(["not " + inp[0][ii] for ii in p_list[i]]))))
+                        self.false_confidence[key] = cnt_all - cnt_unmatch
+                        
+#                         print("add to false", key)
+
+
+#         for dn in raw_perf:
+#             dnf_perf.append(sorted(list(set([inp[0][ii] for ii in dn]))))
    
-        for dn in raw_perf_n:
-            dnf_perf_n.append(sorted(list(set([inp[0][ii] for ii in dn]))))
+#         for dn in raw_perf_n:
+#             dnf_perf_n.append(sorted(list(set([inp[0][ii] for ii in dn]))))
+                
+#         print("dnf_perf", dnf_perf)
+#         print("dnf_perf_n", dnf_perf_n)
+        
+        self.all_confidence = copy.deepcopy(self.true_confidence)
+        self.all_confidence.update(self.false_confidence)
+#         print("self.all_confidence", self.all_confidence)
+#         print("self.true_confidence", self.true_confidence)
+        
+#         print("size of true dnf " + str(len(dnf_perf)))
+        
+#         print("Deriving false expressions...")
+#         dnf_perf_n = list()
+#         raw_perf_n = list()
+#         raw_perf2_n = list()
+#         if check_false:
+#             if check_negative:
+#                 for s in range(max_dnf_len):
+#                     len_dnf = s + 1
+#                     l = [ii for ii in range(numvars)]
+#                     p_list = list(itertools.combinations(l, len_dnf))
+                    
+#                     p_list = [p for p in p_list if not any([pp in redundant_cols for pp in p])]
             
-        print("size of false cnf " + str(len(dnf_perf_n)))
+#                     print(str(len_dnf) + " variable patterns")
+#                     if len(p_list) > MAX_REPS:
+#                         print("Skipping because " + str(len(p_list)) + " combinations is too many")
+#                         break
+
+#                     true_test_pass = True
+#                     for i in range(len(p_list)):
+#                         match_and_break = False
+#                         b = Deterministic_Regressor.convTuple2bin(p_list[i], numvars)
+#                         for p in raw_perf2_n:
+#                             if p == b & p:
+#                                 match_and_break = True
+#                                 break
+#                         if match_and_break:
+#                             continue
+#                         r = [v for k,v in dic.items() if k & b == b]
+#                         if len(r) == 0:
+#                             continue
+#                         cnt_all = len([f for f in r])
+#                         cnt_unmatch = len([f for f in r if f == 1])
+#                         if cnt_unmatch/cnt_all > error_tolerance:
+#                             continue
+
+# #                         if cnt_all - cnt_unmatch < min_match:
+#                         if (cnt_all - cnt_unmatch)/numrows < min_match:
+#                             continue
+                            
+#                         raw_perf_n.append([ii for ii in p_list[i]])
+#                         raw_perf2_n.append(b)       
+#                         self.false_confidence["(" + " | ".join(sorted(list(set([inp[0][ii][2:] if inp[0][ii][0:2] == "n_" else "n_" + inp[0][ii] for ii in p_list[i]])))) + ")"] = cnt_all - cnt_unmatch
+#             else:
+#                 for s in range(max_dnf_len):
+#                     len_dnf = s + 1
+
+#                     l = [ii for ii in range(numvars)]
+#                     p_list = list(itertools.combinations(l, len_dnf))
+                    
+#                     p_list = [p for p in p_list if not any([pp in redundant_cols for pp in p])]
+                    
+#                     print(str(len_dnf) + " variable patterns")
+#                     if len(p_list) > MAX_REPS:
+#                         print("Skipping because " + str(len(p_list)) + " combinations is too many")
+#                         break
+#                     true_test_pass = True
+#                     for i in range(len(p_list)):
+#                         match_and_break = False
+#                         b = Deterministic_Regressor.convTuple2bin(p_list[i], numvars)
+#                         for p in raw_perf2_n:
+#                             if p == b & p:
+#                                 match_and_break = True
+#                                 break
+#                         if match_and_break:
+#                             continue
+#                         r = [v for k,v in dic_opp.items() if k & b == b]
+#                         if len(r) == 0:
+#                             continue
+#                         cnt_all = len([f for f in r])
+#                         cnt_unmatch = len([f for f in r if f == 0])
+#                         if cnt_unmatch/cnt_all > error_tolerance:
+#                             continue
+
+# #                         if cnt_all - cnt_unmatch < min_match:
+#                         if (cnt_all - cnt_unmatch)/numrows < min_match:
+#                             continue
+                            
+#                         raw_perf_n.append([ii for ii in p_list[i]])
+#                         raw_perf2_n.append(b)  
+#                         self.false_confidence["(" + " | ".join(sorted(list(set([inp[0][ii] for ii in p_list[i]])))) + ")"] = cnt_all - cnt_unmatch
+   
+#         for dn in raw_perf_n:
+#             dnf_perf_n.append(sorted(list(set([inp[0][ii] for ii in dn]))))
+            
+        print("size of false dnf " + str(len(dnf_perf_n)))
         
         set_dnf_true = set(["(" + s + ")" for s in [" & ".join(a) for a in dnf_perf]])
-        dnf_common = None
-        set_dnf_false = None
-        if check_false:
-            cnf = None
-            cnf_list = None
-            if check_negative:
-                if len(dnf_perf_n) > 0:
-                    cnf = "(" + ") & (".join([" | ".join(a) for a in [[a[2:] if a[0:2] == "n_" else "n_" + a for a in aa] for aa in dnf_perf_n]]) + ")"
-                else:
-                    cnf = ""
-                set_cnf_false = [[a[2:] if a[0:2] == "n_" else "n_" + a for a in aa] for aa in dnf_perf_n]
-            else:
-                if len(dnf_perf_n) > 0:
-                    cnf = "(" + ") & (".join([" | ".join(a) for a in [[a for a in aa] for aa in dnf_perf_n]]) + ")"
-                else:
-                    cnf = ""
-                set_cnf_false = [[a for a in aa] for aa in dnf_perf_n]
+        set_cnf_false = set(["(" + s + ")" for s in [" & ".join(a) for a in dnf_perf_n]])
+#         dnf_common = None
+#         set_dnf_false = None
+#         if check_false:
+#             cnf = None
+#             cnf_list = None
+#             if check_negative:
+#                 if len(dnf_perf_n) > 0:
+#                     cnf = "(" + ") & (".join([" | ".join(a) for a in [[a[2:] if a[0:2] == "n_" else "n_" + a for a in aa] for aa in dnf_perf_n]]) + ")"
+#                 else:
+#                     cnf = ""
+#                 set_cnf_false = [[a[2:] if a[0:2] == "n_" else "n_" + a for a in aa] for aa in dnf_perf_n]
+#             else:
+#                 if len(dnf_perf_n) > 0:
+#                     cnf = "(" + ") & (".join([" | ".join(a) for a in [[a for a in aa] for aa in dnf_perf_n]]) + ")"
+#                 else:
+#                     cnf = ""
+#                 set_cnf_false = [[a for a in aa] for aa in dnf_perf_n]
 
         self.expression_true = " | ".join(set_dnf_true)
         self.expression_true = Deterministic_Regressor.simplify_dnf(self.expression_true)
-        self.expression_false = Deterministic_Regressor.simplify_dnf(cnf, use_cnf=True)
+#         self.expression_false = Deterministic_Regressor.simplify_dnf(cnf, use_cnf=True)
+        self.expression_false = " | ".join(set_cnf_false)
+        self.expression_false = Deterministic_Regressor.simplify_dnf(self.expression_false)
         
 
             
@@ -758,19 +838,22 @@ class Deterministic_Regressor:
         print("--------------------------------")
 
         if len(set_dnf_true) > 0:
-            print(self.replaceSegName(self.expression_true).replace("(n_", "(NOT ").replace(" n_", " NOT "))
+#             print(self.replaceSegName(self.expression_true).replace("(n_", "(NOT ").replace(" n_", " NOT "))
+            print(self.replaceSegName(self.expression_true))
             
 
-        if check_false:
-            print("")
-            print("FALSE CNF - " + str(len(set_cnf_false)))
-            print("--------------------------------")
-            if len(set_cnf_false) > 0:
-                print(self.replaceSegName(self.expression_false).replace("(n_", "(NOT ").replace(" n_", " NOT "))
+#         if check_false:
+        print("")
+        print("FALSE DNF - " + str(len(set_cnf_false)))
+        print("--------------------------------")
+        if len(set_cnf_false) > 0:
+#                 print(self.replaceSegName(self.expression_false).replace("(n_", "(NOT ").replace(" n_", " NOT "))
+            print(self.replaceSegName(self.expression_false))
             
         perm_vars = list(set([xx for x in dnf_perf for xx in x] + [xx for x in dnf_perf_n for xx in x]))
         
-        not_picked = [self.replaceSegName(inp[0][ii]) if self.replaceSegName(inp[0][ii])[:2] != "n_" else "NOT " + self.replaceSegName(inp[0][ii])[2:] for ii in range(len(inp[0])-1) if inp[0][ii] not in perm_vars]
+#         not_picked = [self.replaceSegName(inp[0][ii]) if self.replaceSegName(inp[0][ii])[:2] != "n_" else "NOT " + self.replaceSegName(inp[0][ii])[2:] for ii in range(len(inp[0])-1) if inp[0][ii] not in perm_vars]
+        not_picked = [self.replaceSegName(inp[0][ii]) for ii in range(len(inp[0])-1) if inp[0][ii] not in perm_vars]
 
         print("")
         print("Unsolved variables - " + str(len(not_picked)) + "/" + str(len(inp[0])-1))
@@ -781,7 +864,7 @@ class Deterministic_Regressor:
         return imp_before_row_reduction
 
 
-    def optimize_params(self, test_data, answer, elements_count_penalty=1.0, solve_method=["common", "union"]):
+    def optimize_params(self, test_data, answer, elements_count_penalty=1.0):
         
         inp = test_data
         
@@ -792,7 +875,7 @@ class Deterministic_Regressor:
         jump = int(MAX_POWER_LEVEL/2)
         ct_opt = 0
         expr_opt = ""
-        win_option_sofar = ""
+#         win_option_sofar = ""
         opt_precision_sofar = 0
         opt_recall_sofar = 0
         opt_f1_sofar = 0
@@ -800,7 +883,7 @@ class Deterministic_Regressor:
 #         ops = ["union", "common", "true", "false"]
 #         if len(used_options) > 0:
 #             ops = used_options
-        ops = solve_method
+#         ops = solve_method
         
         
         doexit = False
@@ -810,63 +893,66 @@ class Deterministic_Regressor:
             print("##### Power Level", ct_now, "######")
         
             best_ee = 0
-            win_option = ""
+#             win_option = ""
             win_expr = ""
             opt_precision = 0
             opt_recall = 0
             opt_f1 = 0
-            for o in ops:
-                print("")
-                print("******* " + o + " ********")
-                res = self.solve(inp, use_expression=o, power_level=ct_now)
+#             for o in ops:
+#             print("")
+#             print("******* " + o + " ********")
+#             res = self.solve(inp, use_expression=o, power_level=ct_now)
+            res = self.solve(inp, power_level=ct_now)
 
-                if len(res) > 0:
+            if len(res) > 0:
 
-                    precision = precision_score(answer, res)
-                    recall = recall_score(answer, res)
-                    f1 = f1_score(answer, res)
-                    print(f"Precision: {precision * 100:.2f}%")
-                    print(f"Recall: {recall * 100:.2f}%")
-                    print(f"F1 Score: {f1 * 100:.2f}%")
-                    ee = (f1 +min(precision,recall))/2-(len(self.last_solve_expression.split("&"))+len(self.last_solve_expression.split("|")))/3000*elements_count_penalty
-                    print(f"Effectiveness & Efficiency Score: {ee * 100:.3f}%")
-                    if best_ee < ee:
-                        best_ee = ee
-                        win_option = o
-                        win_expr = self.last_solve_expression
-                        opt_precision = precision
-                        opt_recall = recall
-                        opt_f1 = f1
-            if best_ee_sofar < best_ee:
-                ct_opt = ct_now
-                best_ee_sofar = best_ee
-                ct_now = ct_now + jump
-                win_option_sofar = win_option
-                expr_opt = win_expr
-                opt_precision_sofar = opt_precision
-                opt_recall_sofar = opt_recall
-                opt_f1_sofar = opt_f1
-                if ct_now > MAX_POWER_LEVEL:
+                precision = precision_score(answer, res)
+                recall = recall_score(answer, res)
+                f1 = f1_score(answer, res)
+                print(f"Precision: {precision * 100:.2f}%")
+                print(f"Recall: {recall * 100:.2f}%")
+                print(f"F1 Score: {f1 * 100:.2f}%")
+                ee = (f1 +min(precision,recall))/2-(len(self.last_solve_expression.split("&"))+len(self.last_solve_expression.split("|")))/3000*elements_count_penalty
+                print(f"Effectiveness & Efficiency Score: {ee * 100:.3f}%")
+#                 if best_ee < ee:
+                best_ee = ee
+#                 win_option = o
+                win_expr = self.last_solve_expression
+                opt_precision = precision
+                opt_recall = recall
+                opt_f1 = f1
+                if best_ee_sofar < best_ee:
+                    ct_opt = ct_now
+                    best_ee_sofar = best_ee
+                    ct_now = ct_now + jump
+#                     win_option_sofar = win_option
+                    expr_opt = win_expr
+                    opt_precision_sofar = opt_precision
+                    opt_recall_sofar = opt_recall
+                    opt_f1_sofar = opt_f1
+                    if ct_now > MAX_POWER_LEVEL:
+                        doexit = True
+                elif jump == 1:
                     doexit = True
-            elif jump == 1:
-                doexit = True
-            elif ct_now == 0:
-                print("#################################")
-                print("")
-                print("SORRY NO SOLUTION FOUND")
-                print("")
-                print("#################################")
-                print("")
-                return None, None
-            else:
-                jump = int(jump/2)
-                ct_now = ct_now - jump
+                elif ct_now == 0:
+                    print("#################################")
+                    print("")
+                    print("SORRY NO SOLUTION FOUND")
+                    print("")
+                    print("#################################")
+                    print("")
+                    return None, None
+                else:
+                    jump = int(jump/2)
+                    ct_now = ct_now - jump
+                    print("ct_now", ct_now)
                 
             if doexit:
                 print("")
                 print("#################################")
                 print("")
-                print("OPTIMUM POWER LEVEL is", ct_opt, "with", win_option_sofar)
+#                 print("OPTIMUM POWER LEVEL is", ct_opt, "with", win_option_sofar)
+                print("OPTIMUM POWER LEVEL is", ct_opt, "with")
                 print("")
                 print(f"Precision: {opt_precision_sofar * 100:.2f}%")
                 print(f"Recall: {opt_recall_sofar * 100:.2f}%")
@@ -881,43 +967,52 @@ class Deterministic_Regressor:
                 self.expression_opt = expr_opt
                 self.opt_f1 = f1
                 
-                return win_option_sofar, ct_opt
+#                 return win_option_sofar, ct_opt
+                return ct_opt
 
     def optimize_compact(self, test_data, answer, cnt_out=8):
 
         inp = test_data
         
-        print("false CNF analysis started")
+        print("Analysis started")
         false_clauses = sorted([(v, k) for k, v in self.false_confidence.items()], reverse=True)
+        true_clauses = sorted([(v, k) for k, v in self.true_confidence.items()], reverse=True)
         
-        expr = ""
-        false_recall = {}
-        false_best_expr = ""
-        min_fp = 9999999
-        min_fn = 9999999
         
+        all_clauses = sorted([(v, k) for k, v in self.all_confidence.items()], reverse=True)
+        
+#         expr = ""
+#         false_recall = {}
+#         false_best_expr = ""
+#         min_fp = 9999999
+#         min_fn = 9999999
+        final_expr = ""
         best_ee = 0
-        if len(false_clauses) > 0:
+        
+        true_exps = []
+        false_exps = []
+        if len(all_clauses) > 0:
 
-            res = self.solve_direct(inp, false_clauses[0][1])
+#             res = self.solve_direct(inp, false_clauses[0][1])
     
-            precision = precision_score(answer, res)
-            recall = recall_score(answer, res)
-            f1 = f1_score(answer, res)
-            best_ee = (f1 + min(precision,recall))/2
+#             precision = precision_score(answer, res)
+#             recall = recall_score(answer, res)
+#             f1 = f1_score(answer, res)
+#             best_ee = (f1 + min(precision,recall))/2
             
                 
-#             print("optimize_max 2")
+# #             print("optimize_max 2")
 
-            conf_matrix = confusion_matrix(answer, res)
-            tn, fp, fn, tp = conf_matrix.ravel()
-            min_fp = fp
-            min_fn = fn
+#             conf_matrix = confusion_matrix(answer, res)
+#             tn, fp, fn, tp = conf_matrix.ravel()
+#             min_fp = fp
+#             min_fn = fn
 
-            false_best_expr = false_clauses[0][1]
+#             false_best_expr = false_clauses[0][1]
             
             cnt = 0
-            for i in range(1, len(false_clauses), 1):
+#             for i in range(1, len(false_clauses), 1):
+            for i in range(1, len(all_clauses), 1):
                 cnt = cnt + 1
                 if cnt_out < cnt:
                     break
@@ -925,11 +1020,34 @@ class Deterministic_Regressor:
                 if i % 10 == 0:
                     print(str(i) + "/" + str(len(false_clauses)) + " completed" )
 
-                expr = false_best_expr + " & " + false_clauses[i][1]
-#                 res = self.solve_direct(inp, false_clauses[i][1])
+                expr = ""
+                temp_true_exps = copy.deepcopy(true_exps)
+                temp_false_exps = copy.deepcopy(false_exps)
+                if all_clauses[i][1] in self.true_confidence:
+                    temp_true_exps.append(all_clauses[i][1])
+                else:
+#                     print("FALSE IN")
+                    temp_false_exps.append(all_clauses[i][1])
+                    
+                true_expression = "(" + " | ".join(temp_true_exps) + ")"
+                false_expression = "not (" + " | ".join(temp_false_exps) + ")"
+    
+#                 print("true_expression", true_expression)
+#                 print("false_expression", false_expression)
+            
+                if len(temp_true_exps) > 0:
+                    expr = true_expression 
+                if len(temp_true_exps) > 0 and len(temp_false_exps) > 0:
+                    expr = expr + " & "
+                if len(temp_false_exps) > 0:
+                    expr = expr + false_expression
+                    
+                expr = expr.replace(" & ", " and ").replace(" | ", " or ")
+#                 print("expr", expr)
+#                 expr = false_best_expr + " & " + false_clauses[i][1]
                 res = self.solve_direct(inp, expr)
-                conf_matrix = confusion_matrix(answer, res)
-                tn, fp, fn, tp = conf_matrix.ravel()
+#                 conf_matrix = confusion_matrix(answer, res)
+#                 tn, fp, fn, tp = conf_matrix.ravel()
                 precision = precision_score(answer, res)
                 recall = recall_score(answer, res)
 #                 print("precision", precision)
@@ -937,79 +1055,85 @@ class Deterministic_Regressor:
                 f1 = f1_score(answer, res)
                 ee = (f1 + min(precision,recall))/2
                 ee = precision
+#                 print("ee", ee)
                 if best_ee < ee:
+#                     print("best_ee", best_ee)
 #                 if min_fp > fp and (0.2 > fn/len(answer)):
 #                 if min_fp + min_fn > fp + fn:
                     best_ee = ee
 
-                    min_fp = fp
-                    min_fn = fn
-                    false_best_expr = expr
+#                     min_fp = fp
+#                     min_fn = fn
+                    final_expr = expr
+                
+                    true_exps = temp_true_exps
+                    false_exps = temp_false_exps
+                
                     cnt = 0
 
-                    if false_best_expr == "":
-                        false_best_expr = "(" + false_clauses[i][1] + ")"
-                    else:
-                        false_best_expr = false_best_expr + " | (" + false_clauses[i][1] + ")"
+#                     if false_best_expr == "":
+#                         false_best_expr = "(" + false_clauses[i][1] + ")"
+#                     else:
+#                         false_best_expr = false_best_expr + " | (" + false_clauses[i][1] + ")"
 #         best_ee = 0   
 #         print("false_best_expr", false_best_expr)
         
-        print("true DNF analysis started")
-        true_clauses = sorted([(v, k) for k, v in self.true_confidence.items()], reverse=True)
-        true_best_expr = ""
-        cnt = 0
-        for i in range(1, len(true_clauses), 1):
-            cnt = cnt + 1
-            if cnt_out < cnt:
-                break
+#         print("true DNF analysis started")
+#         true_clauses = sorted([(v, k) for k, v in self.true_confidence.items()], reverse=True)
+#         true_best_expr = ""
+#         cnt = 0
+#         for i in range(1, len(true_clauses), 1):
+#             cnt = cnt + 1
+#             if cnt_out < cnt:
+#                 break
                     
-            if i % 10 == 0:
-                print(str(i) + "/" + str(len(true_clauses)) + " completed" )
+#             if i % 10 == 0:
+#                 print(str(i) + "/" + str(len(true_clauses)) + " completed" )
             
-            if true_best_expr == "":
-                if false_best_expr == "":
-                    expr = "(" + true_clauses[i][1] + ")"
-                else:
-                    expr = false_best_expr + " | (" + true_clauses[i][1] + ")"
-            else:
-                if false_best_expr == "":
-                    expr = "(" + true_best_expr + " | " + true_clauses[i][1] + ")"
-                else:
-                    expr = false_best_expr + " | (" + true_best_expr + " | " + true_clauses[i][1] + ")"
+#             if true_best_expr == "":
+#                 if false_best_expr == "":
+#                     expr = "(" + true_clauses[i][1] + ")"
+#                 else:
+#                     expr = false_best_expr + " | (" + true_clauses[i][1] + ")"
+#             else:
+#                 if false_best_expr == "":
+#                     expr = "(" + true_best_expr + " | " + true_clauses[i][1] + ")"
+#                 else:
+#                     expr = false_best_expr + " | (" + true_best_expr + " | " + true_clauses[i][1] + ")"
             
-#             print("try true expr", expr)
-            res = self.solve_direct(inp, expr)
+# #             print("try true expr", expr)
+#             res = self.solve_direct(inp, expr)
     
-            conf_matrix = confusion_matrix(answer, res)
-            tn, fp, fn, tp = conf_matrix.ravel()
+#             conf_matrix = confusion_matrix(answer, res)
+#             tn, fp, fn, tp = conf_matrix.ravel()
             
-            precision = precision_score(answer, res)
-            recall = recall_score(answer, res)
-            f1 = f1_score(answer, res)
-            ee = (f1 + min(precision,recall))/2
-#             print("best_ee", best_ee)
-#             print("ee", ee)
-            if best_ee < ee:
-                best_ee = ee
-                min_fp = fp
-                min_fn = fn
-                if true_best_expr == "":
-                    true_best_expr = true_clauses[i][1]
-                else:
-                    true_best_expr = true_best_expr + " | " + true_clauses[i][1]
-                cnt = 0
+#             precision = precision_score(answer, res)
+#             recall = recall_score(answer, res)
+#             f1 = f1_score(answer, res)
+#             ee = (f1 + min(precision,recall))/2
+# #             print("best_ee", best_ee)
+# #             print("ee", ee)
+#             if best_ee < ee:
+#                 best_ee = ee
+#                 min_fp = fp
+#                 min_fn = fn
+#                 if true_best_expr == "":
+#                     true_best_expr = true_clauses[i][1]
+#                 else:
+#                     true_best_expr = true_best_expr + " | " + true_clauses[i][1]
+#                 cnt = 0
 
-#         print("true_best_expr", true_best_expr)
+# #         print("true_best_expr", true_best_expr)
         
-        final_expr = ""
-        if true_best_expr == "" and false_best_expr == "":
-            final_expr = ""
-        if true_best_expr != "" and false_best_expr == "":
-            final_expr = true_best_expr
-        if true_best_expr == "" and false_best_expr != "":
-            final_expr = false_best_expr
-        if true_best_expr != "" and false_best_expr != "":
-            final_expr = false_best_expr + " | (" + true_best_expr + ")"
+#         final_expr = ""
+#         if true_best_expr == "" and false_best_expr == "":
+#             final_expr = ""
+#         if true_best_expr != "" and false_best_expr == "":
+#             final_expr = true_best_expr
+#         if true_best_expr == "" and false_best_expr != "":
+#             final_expr = false_best_expr
+#         if true_best_expr != "" and false_best_expr != "":
+#             final_expr = false_best_expr + " | (" + true_best_expr + ")"
 
         if final_expr != "":
             
@@ -1044,8 +1168,8 @@ class Deterministic_Regressor:
         split_index = len(rows) // divide_by  # Integer division for equal or near-equal halves
         return rows[:split_index], rows[split_index:]
 
-    def train_and_optimize(self, data_list=None, max_dnf_len=4, check_false=True, check_negative=False, error_tolerance=0.02, 
-                       min_match=0.03, use_approx_dnf=False, redundant_thresh=1.00, solve_method=["common", "union"], elements_count_penalty=1.0, 
+    def train_and_optimize(self, data_list=None, max_dnf_len=4, error_tolerance=0.02, 
+                       min_match=0.03, use_approx_dnf=False, redundant_thresh=1.00, elements_count_penalty=1.0, 
                            use_compact_opt=False, cnt_out=8):
         
         print("Training started...")
@@ -1059,7 +1183,7 @@ class Deterministic_Regressor:
 
         train_inp = [headers] + train_data
         
-        self.train(data_list=train_inp, max_dnf_len=max_dnf_len, check_false=check_false, check_negative=check_negative, 
+        self.train(data_list=train_inp, max_dnf_len=max_dnf_len, 
                         error_tolerance=error_tolerance, min_match=min_match, use_approx_dnf=use_approx_dnf, redundant_thresh=redundant_thresh)
 
         print("Optimization started...")
@@ -1068,13 +1192,13 @@ class Deterministic_Regressor:
         inp = [[Deterministic_Regressor.try_convert_to_numeric(inp[i][j]) for j in range(len(inp[i]))] for i in range(len(inp))]
 #         inp = self.discretize_data(inp, by_two, silent=True)
     
-        if check_negative:
-            for i in range(numvars):
-                inp[0].insert(i+numvars, "n_" + inp[0][i])
-            for j in range(1, len(inp), 1):
-                for i in range(numvars):
-                    inp[j].insert(i+numvars, 0 if inp[j][i] == 1 else 1)
-            numvars *= 2
+#         if check_negative:
+#             for i in range(numvars):
+#                 inp[0].insert(i+numvars, "n_" + inp[0][i])
+#             for j in range(1, len(inp), 1):
+#                 for i in range(numvars):
+#                     inp[j].insert(i+numvars, 0 if inp[j][i] == 1 else 1)
+#             numvars *= 2
                 
         answer = [int(inp[i][-1]) for i in range(1, len(inp), 1)]
         inp = [row[:-1] for row in inp]
@@ -1082,10 +1206,11 @@ class Deterministic_Regressor:
         if use_compact_opt:
             return self.optimize_compact(inp, answer, cnt_out=cnt_out)
         else:
-            return self.optimize_params(inp, answer, solve_method=solve_method, elements_count_penalty=1.0)
+#             return self.optimize_params(inp, answer, solve_method=solve_method, elements_count_penalty=1.0)
+            return self.optimize_params(inp, answer, elements_count_penalty=1.0)
     
-    def train_and_optimize_bulk(self, data_list, expected_answers, max_dnf_len=4, check_false=True, check_negative=False, error_tolerance=0.02,  
-                   min_match=0.03, use_approx_dnf=False, redundant_thresh=1.00, solve_method=["common", "union"], elements_count_penalty=1.0, use_compact_opt=False, cnt_out=8):
+    def train_and_optimize_bulk(self, data_list, expected_answers, max_dnf_len=4, error_tolerance=0.02,  
+                   min_match=0.03, use_approx_dnf=False, redundant_thresh=1.00, elements_count_penalty=1.0, use_compact_opt=False, cnt_out=8):
 
         self.children = [Deterministic_Regressor() for _ in range(len(expected_answers))]
 
@@ -1098,8 +1223,8 @@ class Deterministic_Regressor:
             
             for k in range(len(d_list)-1):
                 d_list[k+1].append(expected_answers[i][k])
-            self.children[i].train_and_optimize(data_list=d_list, max_dnf_len=max_dnf_len, check_false=check_false, check_negative=check_negative, error_tolerance=error_tolerance, 
-                    min_match=min_match, use_approx_dnf=use_approx_dnf, redundant_thresh=redundant_thresh, solve_method=solve_method, 
+            self.children[i].train_and_optimize(data_list=d_list, max_dnf_len=max_dnf_len, error_tolerance=error_tolerance, 
+                    min_match=min_match, use_approx_dnf=use_approx_dnf, redundant_thresh=redundant_thresh, 
                                                 elements_count_penalty=elements_count_penalty, use_compact_opt=use_compact_opt, cnt_out=cnt_out)
 
             
@@ -1135,15 +1260,14 @@ class Deterministic_Regressor:
 
         return new_res
     
-    def train_and_optimize_class(self, data_list, expected_answers, max_dnf_len=4, check_false=True, check_negative=False, error_tolerance=0.02, 
-               min_match=0.03, use_approx_dnf=False, redundant_thresh=1.00, solve_method=["common", "union"], elements_count_penalty=1.0, use_compact_opt=False, cnt_out=10):
+    def train_and_optimize_class(self, data_list, expected_answers, max_dnf_len=4, error_tolerance=0.02, 
+               min_match=0.03, use_approx_dnf=False, redundant_thresh=1.00, elements_count_penalty=1.0, use_compact_opt=False, cnt_out=10):
         
         answers = [[0 for _ in range(len(expected_answers))] for _ in range(max(expected_answers)+1)]
         for i in range(len(answers[0])):
             answers[expected_answers[i]][i] = 1
-        self.train_and_optimize_bulk(data_list=data_list, expected_answers=answers, max_dnf_len=max_dnf_len, check_false=check_false, 
-                    check_negative=check_negative, error_tolerance=error_tolerance, 
-                    min_match=min_match, use_approx_dnf=use_approx_dnf, redundant_thresh=redundant_thresh, solve_method=solve_method, 
+        self.train_and_optimize_bulk(data_list=data_list, expected_answers=answers, max_dnf_len=max_dnf_len, error_tolerance=error_tolerance, 
+                    min_match=min_match, use_approx_dnf=use_approx_dnf, redundant_thresh=redundant_thresh, 
                                      elements_count_penalty=elements_count_penalty, use_compact_opt=use_compact_opt, cnt_out=cnt_out)
     
     def prepropcess(self, whole_rows, by_two, splitter=3):
@@ -1201,5 +1325,3 @@ class Deterministic_Regressor:
         print("")
         print("##############")
         print("")
-
-    
