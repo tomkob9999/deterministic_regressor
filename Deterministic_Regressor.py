@@ -1,6 +1,6 @@
-# Name: Deterministic_Regressor
+### Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 3.0.2
+# Version: 3.0.3
 # Date: 2024/01/21
 
 import itertools
@@ -118,7 +118,7 @@ class Deterministic_Regressor:
             exec(__tokens___[__jjjj___] + " = " + str(__ccc___[__jjjj___]))
         return eval(______s____)
             
-    def solve(self, inp_p, confidence_thresh=3, power_level=None):
+    def solve(self, inp_p, confidence_thresh=0, power_level=None, useUnion=True):
         
         inp = [[Deterministic_Regressor.try_convert_to_numeric(inp_p[i][j]) for j in range(len(inp_p[i]))] for i in range(len(inp_p))]
         
@@ -187,11 +187,12 @@ class Deterministic_Regressor:
             active_true_clauses = len(true_exp.split("|"))
             active_false_clauses = len(false_exp.split("|"))
 
+        connector = " | " if useUnion else " & "
 
         if true_exp != "":
             expr = "(" + true_exp + ")"
         if true_exp != "" and false_exp != "":
-            expr = expr + " & "
+            expr = expr + connector
         if false_exp != "":
             expr = expr + "not (" + false_exp + ")"
             
@@ -205,6 +206,9 @@ class Deterministic_Regressor:
         
         self.last_solve_expression = expr
 
+        if len(expr) == 0:
+            print("No expression found")
+            return []
         
         for i in range(len(inp_list)):
             res[i] = Deterministic_Regressor.myeval(inp_list[i], tokens, expr)
@@ -331,12 +335,12 @@ class Deterministic_Regressor:
         head = matrix[0]
         return [head] + [[int(mm) for mm in m] for m in matrix[1:]]
         
-    def train(self, file_path=None, data_list=None, max_dnf_len=4, error_tolerance=0.02, min_match=0.03, use_approx_dnf=False, redundant_thresh=1.00):
+    def train(self, file_path=None, data_list=None, max_dnf_len=4, error_tolerance=0.02, min_match=0.03, use_approx_dnf=False, redundant_thresh=1.00, useExpanded=False):
 
-# file_path: input file in tab-delimited text
-# max_dnf_len: max length of AND clauses in output DNF.  
-#       Increasing this one is heavey especially if check_negative is True
-# drop_fake: enable to drop the clause that met the true condition, but not false condition.  This one is heavy.
+        # file_path: input file in tab-delimited text
+        # data_list: list matrix data with header in the first row and the result in the last col
+        # max_dnf_len: max length of AND clauses in output DNF.  
+        #       Increasing this one is heavey especially if check_negative is True
 
         # Example usage:
         # file_path = '/kaggle/input/dnf-regression/dnf_regression.txt'
@@ -395,7 +399,8 @@ class Deterministic_Regressor:
         raw_perf_n = list()
         raw_perf2_n = list()
 
-        for pattern in [(1, 1), (0, 1), (1, 0), (0, 0)]:
+        patterns = [(1, 1), (0, 1), (1, 0), (0, 0)] if useExpanded else [(1, 1), (0, 0)]
+        for pattern in patterns:
             dat_t = []
             if pattern[0] == 1:
                 dat_t = [row[:-1] for row in inp[1:]]
@@ -501,8 +506,6 @@ class Deterministic_Regressor:
         if len(set_dnf_true) > 0:
             print(self.replaceSegName(self.expression_true))
             
-
-#         if check_false:
         print("")
         print("FALSE DNF - " + str(len(set_cnf_false)))
         print("--------------------------------")
@@ -522,7 +525,7 @@ class Deterministic_Regressor:
         return imp_before_row_reduction
 
 
-    def optimize_params(self, test_data, answer, elements_count_penalty=1.0):
+    def optimize_params(self, test_data, answer, elements_count_penalty=1.0, useUnion=True):
         
         inp = test_data
         
@@ -544,12 +547,11 @@ class Deterministic_Regressor:
             print("##### Power Level", ct_now, "######")
         
             best_ee = 0
-#             win_option = ""
             win_expr = ""
             opt_precision = 0
             opt_recall = 0
             opt_f1 = 0
-            res = self.solve(inp, power_level=ct_now)
+            res = self.solve(inp, power_level=ct_now, useUnion=useUnion)
 
             if len(res) > 0:
 
@@ -589,7 +591,6 @@ class Deterministic_Regressor:
                 else:
                     jump = int(jump/2)
                     ct_now = ct_now - jump
-                    print("ct_now", ct_now)
                 
             if doexit:
                 print("")
@@ -610,10 +611,9 @@ class Deterministic_Regressor:
                 self.expression_opt = expr_opt
                 self.opt_f1 = f1
                 
-#                 return win_option_sofar, ct_opt
                 return ct_opt
 
-    def optimize_compact(self, test_data, answer, cnt_out=8):
+    def optimize_compact(self, test_data, answer, cnt_out=8, useUnion=True):
 
         inp = test_data
         
@@ -651,10 +651,12 @@ class Deterministic_Regressor:
                 true_expression = "(" + " | ".join(temp_true_exps) + ")"
                 false_expression = "not (" + " | ".join(temp_false_exps) + ")"
             
+                connector = " | " if useUnion else " & "
+        
                 if len(temp_true_exps) > 0:
                     expr = true_expression 
                 if len(temp_true_exps) > 0 and len(temp_false_exps) > 0:
-                    expr = expr + " & "
+                    expr = expr + connector
                 if len(temp_false_exps) > 0:
                     expr = expr + false_expression
                     
@@ -711,7 +713,7 @@ class Deterministic_Regressor:
 
     def train_and_optimize(self, data_list=None, max_dnf_len=4, error_tolerance=0.02, 
                        min_match=0.03, use_approx_dnf=False, redundant_thresh=1.00, elements_count_penalty=1.0, 
-                           use_compact_opt=False, cnt_out=8):
+                           use_compact_opt=False, cnt_out=8, useUnion=True, useExpanded=False):
         
         print("Training started...")
         
@@ -723,7 +725,7 @@ class Deterministic_Regressor:
         train_inp = [headers] + train_data
         
         self.train(data_list=train_inp, max_dnf_len=max_dnf_len, 
-                        error_tolerance=error_tolerance, min_match=min_match, use_approx_dnf=use_approx_dnf, redundant_thresh=redundant_thresh)
+                        error_tolerance=error_tolerance, min_match=min_match, use_approx_dnf=use_approx_dnf, redundant_thresh=redundant_thresh, useExpanded=useExpanded)
 
         print("Optimization started...")
         inp = [headers] + valid_data
@@ -734,12 +736,12 @@ class Deterministic_Regressor:
         inp = [row[:-1] for row in inp]
              
         if use_compact_opt:
-            return self.optimize_compact(inp, answer, cnt_out=cnt_out)
+            return self.optimize_compact(inp, answer, cnt_out=cnt_out, useUnion=useUnion)
         else:
-            return self.optimize_params(inp, answer, elements_count_penalty=1.0)
+            return self.optimize_params(inp, answer, elements_count_penalty=1.0, useUnion=useUnion)
     
     def train_and_optimize_bulk(self, data_list, expected_answers, max_dnf_len=4, error_tolerance=0.02,  
-                   min_match=0.03, use_approx_dnf=False, redundant_thresh=1.00, elements_count_penalty=1.0, use_compact_opt=False, cnt_out=8):
+                   min_match=0.03, use_approx_dnf=False, redundant_thresh=1.00, elements_count_penalty=1.0, use_compact_opt=False, cnt_out=8, useUnion=True, useExpanded=False):
 
         self.children = [Deterministic_Regressor() for _ in range(len(expected_answers))]
 
@@ -754,7 +756,7 @@ class Deterministic_Regressor:
                 d_list[k+1].append(expected_answers[i][k])
             self.children[i].train_and_optimize(data_list=d_list, max_dnf_len=max_dnf_len, error_tolerance=error_tolerance, 
                     min_match=min_match, use_approx_dnf=use_approx_dnf, redundant_thresh=redundant_thresh, 
-                                                elements_count_penalty=elements_count_penalty, use_compact_opt=use_compact_opt, cnt_out=cnt_out)
+                                                elements_count_penalty=elements_count_penalty, use_compact_opt=use_compact_opt, cnt_out=cnt_out, useUnion=useUnion, useExpanded=useExpanded)
 
             
             
@@ -790,14 +792,14 @@ class Deterministic_Regressor:
         return new_res
     
     def train_and_optimize_class(self, data_list, expected_answers, max_dnf_len=4, error_tolerance=0.02, 
-               min_match=0.03, use_approx_dnf=False, redundant_thresh=1.00, elements_count_penalty=1.0, use_compact_opt=False, cnt_out=10):
+               min_match=0.03, use_approx_dnf=False, redundant_thresh=1.00, elements_count_penalty=1.0, use_compact_opt=False, cnt_out=10, useUnion=True, useExpanded=False):
         
         answers = [[0 for _ in range(len(expected_answers))] for _ in range(max(expected_answers)+1)]
         for i in range(len(answers[0])):
             answers[expected_answers[i]][i] = 1
         self.train_and_optimize_bulk(data_list=data_list, expected_answers=answers, max_dnf_len=max_dnf_len, error_tolerance=error_tolerance, 
                     min_match=min_match, use_approx_dnf=use_approx_dnf, redundant_thresh=redundant_thresh, 
-                                     elements_count_penalty=elements_count_penalty, use_compact_opt=use_compact_opt, cnt_out=cnt_out)
+                                     elements_count_penalty=elements_count_penalty, use_compact_opt=use_compact_opt, cnt_out=cnt_out, useUnion=useUnion, useExpanded=useExpanded)
     
     def prepropcess(self, whole_rows, by_two, splitter=3):
         self.whole_rows = self.clean_and_discretize(whole_rows, by_two)
@@ -835,6 +837,9 @@ class Deterministic_Regressor:
 
     def show_stats(predicted, actual, average="binary", elements_count_penalty=1.0):
         
+        if len(predicted) != len(actual):
+            print("The row number does not match")
+            return
         answer = actual
         res = predicted
         
