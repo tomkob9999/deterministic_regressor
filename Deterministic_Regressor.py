@@ -1,6 +1,6 @@
 # Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 3.0.1
+# Version: 3.0.2
 # Date: 2024/01/21
 
 import itertools
@@ -124,41 +124,27 @@ class Deterministic_Regressor:
         
         max_power = 64
         
-        true_confidence_thresh = 0
-        false_confidence_thresh = 0
+        all_confidence_thresh = 0
         if power_level is not None:
             if power_level > max_power or power_level < 0:
                 print("power_level must be between 0 and 32")
                 return
 
-            if len(self.true_confidence) == 0:
-                    true_confidence_thresh = 0  
+            if len(self.all_confidence) == 0:
+                    all_confidence_thresh = 0  
             else:
-                max_freq = max([v for k, v in self.true_confidence.items()])
-                min_freq = min([v for k, v in self.true_confidence.items()])
+                max_freq = max([v for k, v in self.all_confidence.items()])
+                min_freq = min([v for k, v in self.all_confidence.items()])
                 this_power = int(power_level/max_power * (max_freq-min_freq) + 0.9999999999)
 
                 if max_freq - this_power < 0:
-                    true_confidence_thresh = 0
+                    all_confidence_thresh = 0
                 else:
-                    true_confidence_thresh = max_freq - this_power
+                    all_confidence_thresh = max_freq - this_power
 
-            if len(self.false_confidence) == 0:
-                    false_confidence_thresh = 0  
-            else:
-                max_freq = max([v for k, v in self.false_confidence.items()])
-                min_freq = min([v for k, v in self.false_confidence.items()])
-                this_power = int(power_level/max_power * (max_freq-min_freq) + 0.9999999999)
-                if max_freq - this_power < 0:
-                    false_confidence_thresh = 0
-                else:
-                    false_confidence_thresh = max_freq - this_power
         else:
-            true_confidence_thresh = confidence_thresh
-            false_confidence_thresh = confidence_thresh
-        
-        print("true_confidence_thresh:", true_confidence_thresh)
-        print("false_confidence_thresh:", false_confidence_thresh)
+            all_confidence_thresh = confidence_thresh
+        print("Confidence Thresh:", all_confidence_thresh)
         print("Input Records:", len(inp)-1)
         
         numvars = len(inp[0])
@@ -178,7 +164,7 @@ class Deterministic_Regressor:
             for s in true_exp.split("|"):
                 s = s.strip()
                 if s in self.true_confidence:
-                    if self.true_confidence[s] >= true_confidence_thresh:
+                    if self.true_confidence[s] >= all_confidence_thresh:
                         true_list.append(s)
                         active_true_clauses += 1
                 else:
@@ -190,7 +176,7 @@ class Deterministic_Regressor:
             for s in false_exp.split("|"):
                 s = s.strip()
                 if s in self.false_confidence:
-                    if self.false_confidence[s] >= false_confidence_thresh:
+                    if self.false_confidence[s] >= all_confidence_thresh:
                         false_list.append(s)
                         active_false_clauses += 1
                 else:
@@ -341,12 +327,10 @@ class Deterministic_Regressor:
     
     def clean_and_discretize(self, inp, by_two):
         inp = [[Deterministic_Regressor.try_convert_to_numeric(inp[i][j]) for j in range(len(inp[i]))] for i in range(len(inp))]
-#         return self.discretize_data(inp, by_two)
         matrix = self.discretize_data(inp, by_two)
         head = matrix[0]
         return [head] + [[int(mm) for mm in m] for m in matrix[1:]]
         
-#     def train(self, file_path=None, data_list=None, max_dnf_len=4, check_false=True, check_negative=False, error_tolerance=0.02, min_match=0.03, use_approx_dnf=False, redundant_thresh=1.00):
     def train(self, file_path=None, data_list=None, max_dnf_len=4, error_tolerance=0.02, min_match=0.03, use_approx_dnf=False, redundant_thresh=1.00):
 
 # file_path: input file in tab-delimited text
