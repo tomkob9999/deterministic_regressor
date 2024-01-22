@@ -1,4 +1,4 @@
-###### Simple Handmade Data Files 1 ######
+###### Simple Handmade Data Files 2 ######
 
 import copy
 from sklearn.metrics import precision_score, recall_score, f1_score
@@ -29,20 +29,28 @@ file_path = '/kaggle/input/tomio5/dnf_regression.txt' # Long
 file_path = '/kaggle/input/tomio6/dnf_regression.txt' # Medium
 file_path = '/kaggle/input/tomio7/dnf_regression.txt' # Medium
 
-# file_path = '/kaggle/input/tomio10/dnf_regression.txt' # ERROR
-# file_path = '/kaggle/input/tomio9/dnf_regression.txt' # ERROR
+###### Load the dataset ###### 
+data_list = None
+with open(file_path, 'r') as f:
+    data_list = [line.strip().split('\t') for line in f]
+###### Load the dataset ###### 
+
+print("read file_path finished", measure(start_time))
+start_time = time.time()
 
 reg = Deterministic_Regressor()
-oup = reg.train(file_path=file_path, error_tolerance=0.02)
-# oup = reg.train(file_path=file_path, error_tolerance=0.03, min_match=0.03)
-# oup = reg.train(file_path=file_path, error_tolerance=0.00)
-# oup = reg.train(file_path=file_path, error_tolerance=0.00, check_negative=True)
 
+answer = reg.clean_and_discretize([row[-1] for row in data_list[1:]], 1)
 
+print("read file_pathclean_and_discretizefinished", measure(start_time))
+start_time = time.time()
+
+oup = reg.train(data_list=data_list, error_tolerance=0.00, useExpanded=True)
 print("train() finished", measure(start_time))
 start_time = time.time()
 
-# print("oup", oup)
-# res = reg.solve(oup, use_expression="common")
-res = reg.solve(oup)
+res = reg.solve(oup, useUnion=False)
+print("solve() finished", measure(start_time))
+
 print("res", res)
+Deterministic_Regressor.show_stats(res, answer) 

@@ -39,12 +39,13 @@ reg = Deterministic_Regressor()
 print("Deterministic_Regressor() finished", measure(start_time))
 start_time = time.time()
 
-reg.prepropcess(data_list, by_two=3)
+reg.prepropcess(data_list, by_two=2)
 print("prepropcess() finished", measure(start_time))
 start_time = time.time()
 
-reg.train_and_optimize_class(data_list=reg.get_train_dat_with_head(), expected_answers=reg.get_train_res_wo_head(), error_tolerance=0.01, max_dnf_len=2, min_match=0.05, 
-                             solve_method=["union", "common", "true", "false"], use_compact_opt=True)
+reg.train_and_optimize_class(data_list=reg.get_train_dat_with_head(), expected_answers=reg.get_train_res_wo_head(), error_tolerance=0.03, max_dnf_len=2,
+                             use_compact_opt=True, useExpanded=True, useUnion=False)
+
 print("train_and_optimize_class() finished", measure(start_time))
 start_time = time.time()
 
