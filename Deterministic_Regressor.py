@@ -1,7 +1,7 @@
 ### Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 3.0.4
-# Date: 2024/01/21
+# Version: 3.0.8
+# Date: 2024/01/23
 
 import itertools
 from sympy.logic import boolalg
@@ -13,6 +13,7 @@ from sklearn.model_selection import train_test_split
 import pandas as pd
 import random
 from sympy import simplify
+import copy
 
 class Deterministic_Regressor:
 # This version has no good matches
@@ -326,11 +327,13 @@ class Deterministic_Regressor:
         # Sample remaining rows
         sampled_rows = [matrix[0]] + random.sample(matrix[1:], num_rows_to_keep - 1)
 
-        return sampled_rows
+#         return sampled_rows
+        return copy.deepcopy(sampled_rows)
 
 
     
     def clean_and_discretize(self, inp, by_two):
+        inp = copy.deepcopy(inp)
         inp = [[Deterministic_Regressor.try_convert_to_numeric(inp[i][j]) for j in range(len(inp[i]))] for i in range(len(inp))]
         matrix = self.discretize_data(inp, by_two)
         head = matrix[0]
@@ -537,7 +540,8 @@ class Deterministic_Regressor:
         
         inp = test_data
         
-        best_ee_sofar = 0
+#         best_ee_sofar = 0
+        best_ee_sofar = -1
         ct_now = 0
 
         MAX_POWER_LEVEL = 64
@@ -547,6 +551,7 @@ class Deterministic_Regressor:
         opt_precision_sofar = 0
         opt_recall_sofar = 0
         opt_f1_sofar = 0
+        opt_match_rate_sofar = 0
         
         doexit = False
         for i in range(100):
@@ -559,23 +564,33 @@ class Deterministic_Regressor:
             opt_precision = 0
             opt_recall = 0
             opt_f1 = 0
+            opt_match_rate = 0
             res = self.solve(inp, power_level=ct_now, useUnion=useUnion)
 
             if len(res) > 0:
 
+                win_expr = self.last_solve_expression
+                num_match = sum([1 if answer[i] == res[i] else 0 for i in range(len(answer))])
+#                 print(str(num_match) + "/" + str(len(res)), " records matched")
+                print(str(num_match) + "/" + str(len(res)), " records matched " + f" ({num_match/len(res)*100:.2f}%)")        
                 precision = precision_score(answer, res)
                 recall = recall_score(answer, res)
+#                 precision = precision_score(answer, res, average='weighted', labels=np.unique(res))
+#                 recall = recall_score(answer, res, average='weighted', labels=np.unique(res))
                 f1 = f1_score(answer, res)
+#                 f1 = f1_score(answer, res, average='weighted', labels=np.unique(res))
+#                 f1 = f1_score(answer, res, average='weighted', labels=np.unique(res))
                 print(f"Precision: {precision * 100:.2f}%")
                 print(f"Recall: {recall * 100:.2f}%")
                 print(f"F1 Score: {f1 * 100:.2f}%")
                 ee = (f1 +min(precision,recall))/2-(len(self.last_solve_expression.split("&"))+len(self.last_solve_expression.split("|")))/3000*elements_count_penalty
+#                 ee = f1-(len(self.last_solve_expression.split("&"))+len(self.last_solve_expression.split("|")))/3000*elements_count_penalty
                 print(f"Effectiveness & Efficiency Score: {ee * 100:.3f}%")
                 best_ee = ee
-                win_expr = self.last_solve_expression
                 opt_precision = precision
                 opt_recall = recall
                 opt_f1 = f1
+                opt_match_rate = num_match/len(res)
                 if best_ee_sofar < best_ee:
                     ct_opt = ct_now
                     best_ee_sofar = best_ee
@@ -584,14 +599,17 @@ class Deterministic_Regressor:
                     opt_precision_sofar = opt_precision
                     opt_recall_sofar = opt_recall
                     opt_f1_sofar = opt_f1
-                    if ct_now > MAX_POWER_LEVEL:
+                    opt_match_rate_sofar = opt_match_rate
+                    if ct_now > MAX_POWER_LEVEL or f1 == 1:
                         doexit = True
-                elif jump == 1:
+                elif jump == 1 or expr_opt == win_expr:
                     doexit = True
                 elif ct_now == 0:
+#                     doexit = True
                     print("#################################")
                     print("")
                     print("SORRY NO SOLUTION FOUND")
+                    print(str(sum([1 if answer[i] == res[i] else 0 for i in range(len(answer))])) + "/" + str(len(res)), " records matched")
                     print("")
                     print("#################################")
                     print("")
@@ -604,14 +622,16 @@ class Deterministic_Regressor:
                 print("")
                 print("#################################")
                 print("")
-                print("OPTIMUM POWER LEVEL is", ct_opt, "with")
+                print("OPTIMUM POWER LEVEL is", ct_opt)
                 print("")
+#                 print(f"Matching Rate: {opt_match_rate_sofar*100:.2f}%")     
                 print(f"Precision: {opt_precision_sofar * 100:.2f}%")
                 print(f"Recall: {opt_recall_sofar * 100:.2f}%")
                 print(f"F1 Score: {opt_f1_sofar * 100:.2f}%")
                 print(f"Effectiveness & Efficiency Score: {best_ee_sofar * 100:.3f}%")
                 print("Expression:")
-                print(self.replaceSegName(expr_opt).replace("(n_", "(NOT ").replace(" n_", " NOT "))
+                print(self.replaceSegName(expr_opt))
+                print("expr_opt", expr_opt)
                 print("")
                 print("#################################")
                 print("")
@@ -633,7 +653,8 @@ class Deterministic_Regressor:
         all_clauses = sorted([(v, k) for k, v in self.all_confidence.items()], reverse=True)
         
         final_expr = ""
-        best_ee = 0
+#         best_ee = 0
+        best_ee = -1
         
         true_exps = []
         false_exps = []
@@ -697,14 +718,20 @@ class Deterministic_Regressor:
                 print("")
                 precision = precision_score(answer, res)
                 recall = recall_score(answer, res)
+#                 precision = precision_score(answer, res, average='weighted', labels=np.unique(res))
+#                 recall = recall_score(answer, res, average='weighted', labels=np.unique(res))
                 f1 = f1_score(answer, res)
+#                 f1 = f1_score(answer, res, average='weighted', labels=np.unique(res))
+#                 f1 = f1_score(answer, res, average='weighted', labels=np.unique(res))
+#                 print(str(sum([1 if answer[i] == res[i] else 0 for i in range(len(answer))])) + "/" + str(len(res)), " records matched")
+                print(str(sum([1 if answer[i] == res[i] else 0 for i in range(len(answer))])) + "/" + str(len(res)), " records matched " + f" ({sum([1 if answer[i] == res[i] else 0 for i in range(len(answer))])/len(res)*100:.2f}%)")
                 print(f"Precision: {precision * 100:.2f}%")
                 print(f"Recall: {recall * 100:.2f}%")
                 print(f"F1 Score: {f1 * 100:.2f}%")
 
                 self.opt_f1 = f1
                 
-                print(self.replaceSegName(final_expr).replace("(n_", "(NOT ").replace(" n_", " NOT "))
+                print(self.replaceSegName(final_expr))
                 
                 print("")
                 
@@ -714,6 +741,7 @@ class Deterministic_Regressor:
             
             
     def random_split_matrix(matrix, divide_by=2):
+        matrix = copy.deepcopy(matrix)
         rows = list(matrix)  # Convert to list for easier shuffling
         random.shuffle(rows)  # Shuffle rows in-place
         split_index = len(rows) // divide_by  # Integer division for equal or near-equal halves
@@ -816,9 +844,9 @@ class Deterministic_Regressor:
         random.shuffle(data)  # Shuffle rows in-place
         split_index = len(data) // splitter  # Integer division for equal or near-equal halves
         self.test_rows = data[:split_index]
-        print("len(self.test_rows)", len(self.test_rows))
+#         print("len(self.test_rows)", len(self.test_rows))
         self.train_rows = data[split_index:]
-        print("len(self.train_rows)", len(self.train_rows))
+#         print("len(self.train_rows)", len(self.train_rows))
     
     def get_train_dat_wo_head(self):
         return [row[:-1] for row in self.train_rows]
@@ -843,7 +871,7 @@ class Deterministic_Regressor:
         return [self.whole_rows[0]] + self.test_rows
     
 
-    def show_stats(predicted, actual, average="binary", elements_count_penalty=1.0):
+    def show_stats(predicted, actual, average="weighted", elements_count_penalty=1.0):
         
         if len(predicted) != len(actual):
             print("The row number does not match")
@@ -851,12 +879,16 @@ class Deterministic_Regressor:
         answer = actual
         res = predicted
         
-        precision = precision_score(answer, res, average=average)
-        recall = recall_score(answer, res, average=average)
-        f1 = f1_score(answer, res, average=average)
+#         precision = precision_score(answer, res, average=average)
+#         recall = recall_score(answer, res, average=average)
+#         f1 = f1_score(answer, res, average=average, labels=np.unique(res))
+        precision = precision_score(answer, res, average=average, labels=np.unique(res))
+        recall = recall_score(answer, res, average=average, labels=np.unique(res))
+        f1 = f1_score(answer, res, average=average, labels=np.unique(res))
         print("")
         print("####### PREDICTION STATS #######")
         print("")
+        print(str(sum([1 if answer[i] == res[i] else 0 for i in range(len(answer))])) + "/" + str(len(res)), " records matched" + f" ({sum([1 if answer[i] == res[i] else 0 for i in range(len(answer))])/len(res)*100:.2f}%)")
         print(f"Precision: {precision * 100:.2f}%")
         print(f"Recall: {recall * 100:.2f}%")
         print(f"F1 Score: {f1 * 100:.2f}%")
