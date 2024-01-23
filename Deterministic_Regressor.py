@@ -1,7 +1,7 @@
 ### Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 3.0.8
-# Date: 2024/01/23
+# Version: 3.0.9
+# Date: 2024/01/24
 
 import itertools
 from sympy.logic import boolalg
@@ -124,6 +124,13 @@ class Deterministic_Regressor:
         
         inp = [[Deterministic_Regressor.try_convert_to_numeric(inp_p[i][j]) for j in range(len(inp_p[i]))] for i in range(len(inp_p))]
         
+#         print("all_confidence")
+#         print(sorted([(v, k) for k, v in self.all_confidence.items()], reverse=True))
+#         print("true_confidence")
+#         print(sorted([(v, k) for k, v in self.true_confidence.items()], reverse=True))
+#         print("false_confidence")
+#         print(sorted([(v, k) for k, v in self.false_confidence.items()], reverse=True))
+        
         max_power = 64
         
         all_confidence_thresh = 0
@@ -136,6 +143,7 @@ class Deterministic_Regressor:
                     all_confidence_thresh = 0  
             else:
                 max_freq = max([v for k, v in self.all_confidence.items()])
+                print("max_freq", max_freq)
                 min_freq = min([v for k, v in self.all_confidence.items()])
                 this_power = int(power_level/max_power * (max_freq-min_freq) + 0.9999999999)
 
@@ -161,17 +169,19 @@ class Deterministic_Regressor:
         false_exp = self.expression_false
         active_true_clauses = 0
         active_false_clauses = 0
-        if confidence_thresh > 0:
+#         if confidence_thresh > 0:
+        if all_confidence_thresh > 0:
             true_list = []
             for s in true_exp.split("|"):
                 s = s.strip()
                 if s in self.true_confidence:
                     if self.true_confidence[s] >= all_confidence_thresh:
+#                         print("self.true_confidence[s]", self.true_confidence[s])
                         true_list.append(s)
                         active_true_clauses += 1
-                else:
-                    true_list.append(s)
-                    active_true_clauses += 1
+#                 else:
+#                     true_list.append(s)
+#                     active_true_clauses += 1
             true_exp = " | ".join(true_list)
             
             false_list = []
@@ -179,11 +189,12 @@ class Deterministic_Regressor:
                 s = s.strip()
                 if s in self.false_confidence:
                     if self.false_confidence[s] >= all_confidence_thresh:
+#                         print("self.false_confidence[s]", self.false_confidence[s])
                         false_list.append(s)
                         active_false_clauses += 1
-                else:
-                    false_list.append(s)
-                    active_false_clauses += 1
+#                 else:
+#                     false_list.append(s)
+#                     active_false_clauses += 1
             false_exp = " | ".join(false_list)
         else:
             active_true_clauses = len(true_exp.split("|"))
@@ -567,7 +578,16 @@ class Deterministic_Regressor:
             opt_match_rate = 0
             res = self.solve(inp, power_level=ct_now, useUnion=useUnion)
 
-            if len(res) > 0:
+            if len(res) == 0:
+                print("#################################")
+                print("")
+                print("SORRY NO SOLUTION FOUND")
+                print(str(sum([1 if answer[i] == res[i] else 0 for i in range(len(answer))])) + "/" + str(len(res)), " records matched")
+                print("")
+                print("#################################")
+                print("")
+                return None, None
+            else:
 
                 win_expr = self.last_solve_expression
                 num_match = sum([1 if answer[i] == res[i] else 0 for i in range(len(answer))])
