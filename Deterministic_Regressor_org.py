@@ -1,7 +1,7 @@
 # Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 2.9.3
-# Date: 2024/01/21
+# Version: 2.9.4
+# Date: 2024/01/23
 
 import itertools
 from sympy.logic import boolalg
@@ -785,7 +785,8 @@ class Deterministic_Regressor:
         
         inp = test_data
         
-        best_ee_sofar = 0
+#         best_ee_sofar = 0
+        best_ee_sofar = -1
         ct_now = 0
 
         MAX_POWER_LEVEL = 64
@@ -809,7 +810,8 @@ class Deterministic_Regressor:
             print("")
             print("##### Power Level", ct_now, "######")
         
-            best_ee = 0
+#             best_ee = 0
+            best_ee = -1
             win_option = ""
             win_expr = ""
             opt_precision = 0
@@ -896,7 +898,8 @@ class Deterministic_Regressor:
         min_fp = 9999999
         min_fn = 9999999
         
-        best_ee = 0
+#         best_ee = 0
+        best_ee = -1
         if len(false_clauses) > 0:
 
             res = self.solve_direct(inp, false_clauses[0][1])
@@ -1201,3 +1204,5 @@ class Deterministic_Regressor:
         print("")
         print("##############")
         print("")
+
+    
