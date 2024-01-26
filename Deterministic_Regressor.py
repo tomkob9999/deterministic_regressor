@@ -1,7 +1,7 @@
 ### Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 3.1.1
-# Date: 2024/01/24
+# Version: 3.1.2
+# Date: 2024/01/26
 
 import itertools
 from sympy.logic import boolalg
@@ -373,9 +373,22 @@ class Deterministic_Regressor:
         self.tokens = copy.deepcopy(inp[0])
         print("")
         
-        print("Redundant Pairs:")
+        print("Uni-valued Columns:")
         numrows = len(inp)-1
         redundant_cols = set()
+        for i in range(len(inp[0])-1):
+#             if i in redundant_cols:
+#                 continue
+            vals = [row[i] for row in inp[1:]]
+            cnts = Counter(vals)
+#             print("vals", vals)
+#             print("cnts", cnts)
+            if len(cnts) == 1:
+                redundant_cols.add(i)
+                print(self.tokens[i])
+        print("")
+        
+        print("Redundant Pairs:")
         for i in range(len(inp[0])-1):
             for j in range(i+1, len(inp[0])-1):
                 if j in redundant_cols:
@@ -385,6 +398,8 @@ class Deterministic_Regressor:
                     print(self.tokens[j], "->",self.tokens[i])
                     redundant_cols.add(j)
         print("")
+        
+
         
         if max_dnf_len > numvars - 1:
             max_dnf_len = numvars - 1
@@ -488,7 +503,7 @@ class Deterministic_Regressor:
         self.all_confidence = copy.deepcopy(self.true_confidence)
         self.all_confidence.update(self.false_confidence)
 
-        print("size of false dnf " + str(len(dnf_perf_n)))
+#         print("size of false dnf " + str(len(dnf_perf_n)))
         
         set_dnf_true = set(["(" + s + ")" for s in [" & ".join(a) for a in dnf_perf]])
         set_cnf_false = set(["(" + s + ")" for s in [" & ".join(a) for a in dnf_perf_n]])
