@@ -1,4 +1,4 @@
-###### Breast Cancer Data Test 2 ######
+###### Simple Handmade Data Files 2 ######
 
 import copy
 from sklearn.metrics import precision_score, recall_score, f1_score
@@ -20,36 +20,38 @@ def measure(start_time):
            
 start_time = time.time()
 
-###### Load the breast cancer dataset ###### 
-data = load_breast_cancer()
-X, y = data.data, data.target
-# X, X_test, y, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-X_list = [list(a) for a in X]
-y_list = list(y)
-heads = [f.replace(" ", "_") for f in data.feature_names]
-X_list.insert(0, heads)
-y_list.insert(0, "Result")
-data_list = [X_list[i] + [y_list[i]] for i in range(len(X_list))]
-###### Load the breast cancer dataset ###### 
 
-print("load_breast_cancer() finished", measure(start_time))
+file_path = '/kaggle/input/tomio1/dnf_regression.txt' # Short
+file_path = '/kaggle/input/tomio2/dnf_regression.txt' # Short
+file_path = '/kaggle/input/tomio3/dnf_regression.txt' # Short
+file_path = '/kaggle/input/tomio4/dnf_regression.txt' # Long
+file_path = '/kaggle/input/tomio5/dnf_regression.txt' # Long
+file_path = '/kaggle/input/tomio6/dnf_regression.txt' # Medium
+file_path = '/kaggle/input/tomio7/dnf_regression.txt' # Medium
+
+###### Load the dataset ###### 
+handmade_list = None
+with open(file_path, 'r') as f:
+    handmade_list = [line.strip().split('\t') for line in f]
+###### Load the dataset ###### 
+
+print("read file_path finished", measure(start_time))
 start_time = time.time()
 
 reg = Deterministic_Regressor()
 
-reg.prepropcess(data_list, by_two=2)
-
-print("prepropcess() finished", measure(start_time))
+answer = [int(row[-1]) for row in handmade_list[1:]]
 start_time = time.time()
 
-inp = reg.train_and_optimize(data_list=reg.get_train_datres_with_head(), error_tolerance=0.03, max_dnf_len=2, use_compact_opt=True, useExpanded=True)
-
-print("train_and_optimize() finished", measure(start_time))
-start_time = time.time()# # print(inp)
-res = reg.solve_with_opt(reg.get_test_dat_with_head())
-        
-print("solve_with_opt() finished", measure(start_time))
+oup = reg.train(data_list=handmade_list, error_tolerance=0.00, useExpanded=True)
+print("train() finished", measure(start_time))
 start_time = time.time()
 
-answer = reg.get_test_res_wo_head()
-Deterministic_Regressor.show_stats(res, answer)
+res = reg.solve(oup, useUnion=False)
+print("solve() finished", measure(start_time))
+Deterministic_Regressor.show_stats(res, answer) 
+
+print("res")
+print(res)
+print("answer")
+print(answer)

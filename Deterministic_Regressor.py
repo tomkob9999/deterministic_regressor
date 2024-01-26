@@ -1,6 +1,6 @@
 ### Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 3.0.9
+# Version: 3.1.1
 # Date: 2024/01/24
 
 import itertools
@@ -14,6 +14,7 @@ import pandas as pd
 import random
 from sympy import simplify
 import copy
+from collections import Counter
 
 class Deterministic_Regressor:
 # This version has no good matches
@@ -40,8 +41,9 @@ class Deterministic_Regressor:
         self.whole_rows = []
         self.test_rows = []
         self.train_rows = []
-        
-        
+        self.classDic = {}
+        self.classDicRev = {}
+        self.item_counts = {}
 
     def remove_supersets(sets_list):
         result = []
@@ -87,7 +89,6 @@ class Deterministic_Regressor:
         ss = [set(s) for s in ss]
 
         filtered_sets = Deterministic_Regressor.remove_supersets(ss)
-#         filtered_lists = [sorted(list(f)) for f in sorted(filtered_sets)] if withSort else [sorted(list(f)) for f in filtered_sets] 
         filtered_lists = [sorted(list(f)) for f in filtered_sets]
         filtered_lists = [(" " + tok2 + " ").join(f) for f in sorted(filtered_lists)] if withSort else [(" " + tok2 + " ").join(f) for f in filtered_lists]
         str = "(" + (") " + tok1 + " (").join(filtered_lists) + ")"
@@ -124,12 +125,6 @@ class Deterministic_Regressor:
         
         inp = [[Deterministic_Regressor.try_convert_to_numeric(inp_p[i][j]) for j in range(len(inp_p[i]))] for i in range(len(inp_p))]
         
-#         print("all_confidence")
-#         print(sorted([(v, k) for k, v in self.all_confidence.items()], reverse=True))
-#         print("true_confidence")
-#         print(sorted([(v, k) for k, v in self.true_confidence.items()], reverse=True))
-#         print("false_confidence")
-#         print(sorted([(v, k) for k, v in self.false_confidence.items()], reverse=True))
         
         max_power = 64
         
@@ -169,19 +164,14 @@ class Deterministic_Regressor:
         false_exp = self.expression_false
         active_true_clauses = 0
         active_false_clauses = 0
-#         if confidence_thresh > 0:
         if all_confidence_thresh > 0:
             true_list = []
             for s in true_exp.split("|"):
                 s = s.strip()
                 if s in self.true_confidence:
                     if self.true_confidence[s] >= all_confidence_thresh:
-#                         print("self.true_confidence[s]", self.true_confidence[s])
                         true_list.append(s)
                         active_true_clauses += 1
-#                 else:
-#                     true_list.append(s)
-#                     active_true_clauses += 1
             true_exp = " | ".join(true_list)
             
             false_list = []
@@ -189,12 +179,8 @@ class Deterministic_Regressor:
                 s = s.strip()
                 if s in self.false_confidence:
                     if self.false_confidence[s] >= all_confidence_thresh:
-#                         print("self.false_confidence[s]", self.false_confidence[s])
                         false_list.append(s)
                         active_false_clauses += 1
-#                 else:
-#                     false_list.append(s)
-#                     active_false_clauses += 1
             false_exp = " | ".join(false_list)
         else:
             active_true_clauses = len(true_exp.split("|"))
@@ -350,7 +336,7 @@ class Deterministic_Regressor:
         head = matrix[0]
         return [head] + [[int(mm) for mm in m] for m in matrix[1:]]
         
-    def train(self, file_path=None, data_list=None, max_dnf_len=4, error_tolerance=0.02, min_match=0.03, use_approx_dnf=False, redundant_thresh=1.00, useExpanded=False):
+    def train(self, file_path=None, data_list=None, max_dnf_len=4, error_tolerance=0.00, min_match=0.00, use_approx_dnf=False, redundant_thresh=1.00, useExpanded=True):
 
         # file_path: input file in tab-delimited text
         # data_list: list matrix data with header in the first row and the result in the last col
@@ -482,13 +468,9 @@ class Deterministic_Regressor:
                         if pattern[0] == 1:
                             key = "(" + " & ".join(sorted(list(set([inp[0][ii] for ii in p_list[i]])))) + ")"
                             dnf_perf.append(sorted(list(set([inp[0][ii] for ii in p_list[i]]))))
-#                             dnf_perf.append(list(set([inp[0][ii] for ii in p_list[i]])))
                         else:
-#                             key = "(not " + " & not ".join(sorted(list(set([inp[0][ii] for ii in p_list[i]])))) + ")" 
                             key = "(not (" + ") & not (".join(sorted(list(set([inp[0][ii] for ii in p_list[i]])))) + "))" 
-#                             dnf_perf.append(sorted(list(set(["not " + inp[0][ii] for ii in p_list[i]]))))
                             dnf_perf.append(sorted(list(set(["not (" + inp[0][ii] + ")" for ii in p_list[i]]))))
-#                             dnf_perf.append(list(set(["not (" + inp[0][ii] + ")" for ii in p_list[i]])))
                         self.true_confidence[key] = cnt_all - cnt_unmatch
                         
                     else:
@@ -497,12 +479,9 @@ class Deterministic_Regressor:
                         if pattern[0] == 1:
                             key = "(" + " & ".join(sorted(list(set([inp[0][ii] for ii in p_list[i]])))) + ")"
                             dnf_perf_n.append(sorted(list(set([inp[0][ii] for ii in p_list[i]]))))
-#                             dnf_perf_n.append(list(set([inp[0][ii] for ii in p_list[i]])))
                         else:
                             key = "(not (" + ") & not (".join(sorted(list(set([inp[0][ii] for ii in p_list[i]])))) + "))" 
-#                             dnf_perf_n.append(sorted(list(set(["not " + inp[0][ii] for ii in p_list[i]]))))
                             dnf_perf_n.append(sorted(list(set(["not (" + inp[0][ii] + ")" for ii in p_list[i]]))))
-#                             dnf_perf_n.append(list(set(["not (" + inp[0][ii] + ")" for ii in p_list[i]])))
                         self.false_confidence[key] = cnt_all - cnt_unmatch
 
         
@@ -550,8 +529,6 @@ class Deterministic_Regressor:
     def optimize_params(self, test_data, answer, elements_count_penalty=1.0, useUnion=False):
         
         inp = test_data
-        
-#         best_ee_sofar = 0
         best_ee_sofar = -1
         ct_now = 0
 
@@ -591,20 +568,15 @@ class Deterministic_Regressor:
 
                 win_expr = self.last_solve_expression
                 num_match = sum([1 if answer[i] == res[i] else 0 for i in range(len(answer))])
-#                 print(str(num_match) + "/" + str(len(res)), " records matched")
                 print(str(num_match) + "/" + str(len(res)), " records matched " + f" ({num_match/len(res)*100:.2f}%)")        
                 precision = precision_score(answer, res)
                 recall = recall_score(answer, res)
-#                 precision = precision_score(answer, res, average='weighted', labels=np.unique(res))
-#                 recall = recall_score(answer, res, average='weighted', labels=np.unique(res))
                 f1 = f1_score(answer, res)
-#                 f1 = f1_score(answer, res, average='weighted', labels=np.unique(res))
-#                 f1 = f1_score(answer, res, average='weighted', labels=np.unique(res))
                 print(f"Precision: {precision * 100:.2f}%")
                 print(f"Recall: {recall * 100:.2f}%")
                 print(f"F1 Score: {f1 * 100:.2f}%")
                 ee = (f1 +min(precision,recall))/2-(len(self.last_solve_expression.split("&"))+len(self.last_solve_expression.split("|")))/3000*elements_count_penalty
-#                 ee = f1-(len(self.last_solve_expression.split("&"))+len(self.last_solve_expression.split("|")))/3000*elements_count_penalty
+                ee = 0 if ee < 0 else ee
                 print(f"Effectiveness & Efficiency Score: {ee * 100:.3f}%")
                 best_ee = ee
                 opt_precision = precision
@@ -625,7 +597,6 @@ class Deterministic_Regressor:
                 elif jump == 1 or expr_opt == win_expr:
                     doexit = True
                 elif ct_now == 0:
-#                     doexit = True
                     print("#################################")
                     print("")
                     print("SORRY NO SOLUTION FOUND")
@@ -644,14 +615,12 @@ class Deterministic_Regressor:
                 print("")
                 print("OPTIMUM POWER LEVEL is", ct_opt)
                 print("")
-#                 print(f"Matching Rate: {opt_match_rate_sofar*100:.2f}%")     
                 print(f"Precision: {opt_precision_sofar * 100:.2f}%")
                 print(f"Recall: {opt_recall_sofar * 100:.2f}%")
                 print(f"F1 Score: {opt_f1_sofar * 100:.2f}%")
                 print(f"Effectiveness & Efficiency Score: {best_ee_sofar * 100:.3f}%")
                 print("Expression:")
                 print(self.replaceSegName(expr_opt))
-                print("expr_opt", expr_opt)
                 print("")
                 print("#################################")
                 print("")
@@ -673,7 +642,6 @@ class Deterministic_Regressor:
         all_clauses = sorted([(v, k) for k, v in self.all_confidence.items()], reverse=True)
         
         final_expr = ""
-#         best_ee = 0
         best_ee = -1
         
         true_exps = []
@@ -687,7 +655,7 @@ class Deterministic_Regressor:
                     break
                     
                 if i % 10 == 0:
-                    print(str(i) + "/" + str(len(false_clauses)) + " completed" )
+                    print(str(i) + "/" + str(len(all_clauses)) + " completed" )
 
                 expr = ""
                 temp_true_exps = copy.deepcopy(true_exps)
@@ -715,7 +683,7 @@ class Deterministic_Regressor:
                 recall = recall_score(answer, res)
                 f1 = f1_score(answer, res)
                 ee = (f1 + min(precision,recall))/2
-                ee = precision
+                ee = 0 if ee < 0 else ee
                 if best_ee < ee:
                     best_ee = ee
 
@@ -738,12 +706,7 @@ class Deterministic_Regressor:
                 print("")
                 precision = precision_score(answer, res)
                 recall = recall_score(answer, res)
-#                 precision = precision_score(answer, res, average='weighted', labels=np.unique(res))
-#                 recall = recall_score(answer, res, average='weighted', labels=np.unique(res))
                 f1 = f1_score(answer, res)
-#                 f1 = f1_score(answer, res, average='weighted', labels=np.unique(res))
-#                 f1 = f1_score(answer, res, average='weighted', labels=np.unique(res))
-#                 print(str(sum([1 if answer[i] == res[i] else 0 for i in range(len(answer))])) + "/" + str(len(res)), " records matched")
                 print(str(sum([1 if answer[i] == res[i] else 0 for i in range(len(answer))])) + "/" + str(len(res)), " records matched " + f" ({sum([1 if answer[i] == res[i] else 0 for i in range(len(answer))])/len(res)*100:.2f}%)")
                 print(f"Precision: {precision * 100:.2f}%")
                 print(f"Recall: {recall * 100:.2f}%")
@@ -767,9 +730,9 @@ class Deterministic_Regressor:
         split_index = len(rows) // divide_by  # Integer division for equal or near-equal halves
         return rows[:split_index], rows[split_index:]
 
-    def train_and_optimize(self, data_list=None, max_dnf_len=4, error_tolerance=0.02, 
-                       min_match=0.03, use_approx_dnf=False, redundant_thresh=1.00, elements_count_penalty=1.0, 
-                           use_compact_opt=False, cnt_out=20, useUnion=False, useExpanded=False):
+    def train_and_optimize(self, data_list=None, max_dnf_len=4, error_tolerance=0.00, 
+                       min_match=0.00, use_approx_dnf=False, redundant_thresh=1.00, elements_count_penalty=1.0, 
+                           use_compact_opt=False, cnt_out=20, useUnion=False, useExpanded=True):
         
         print("Training started...")
         
@@ -797,12 +760,20 @@ class Deterministic_Regressor:
             return self.optimize_params(inp, answer, elements_count_penalty=1.0, useUnion=useUnion)
     
     def train_and_optimize_bulk(self, data_list, expected_answers, max_dnf_len=4, error_tolerance=0.02,  
-                   min_match=0.03, use_approx_dnf=False, redundant_thresh=1.00, elements_count_penalty=1.0, use_compact_opt=False, cnt_out=20, useUnion=False, useExpanded=False):
+                   min_match=0.03, use_approx_dnf=False, redundant_thresh=1.00, elements_count_penalty=1.0, use_compact_opt=False, cnt_out=20, useUnion=False, useExpanded=True):
 
         self.children = [Deterministic_Regressor() for _ in range(len(expected_answers))]
+        
+        cnt_recs = len(expected_answers[0])
 
         for i in range(len(self.children)):
-            print("Child", i)
+            if self.classDic is not None and len(self.classDic) > 0:
+                print("")
+                print("=====================================================================================")
+                print("Start training class", self.classDic[i], "(" + str(self.item_counts[self.classDic[i]]) + "/"+ str(cnt_recs) + ")")
+                print("")
+            else:
+                print("Child", i)
             
             self.children[i].dic_segments = copy.deepcopy(self.dic_segments)
             d_list = copy.deepcopy(data_list)
@@ -839,20 +810,28 @@ class Deterministic_Regressor:
             numbers = [s[1] for s in sorted([(random.random()*dic_f1[i], i) for i in range(len_res)], reverse=True)]
             for k in range(len(numbers)):
                 if res[numbers[k]][i] == 1:
-                    new_res[i] = numbers[k]
+                    new_res[i] = self.classDic[numbers[k]]
                     break
                 if k == len(numbers) - 1:
-                    new_res[i] = numbers[k]
+                    new_res[i] = self.classDic[numbers[k]]
                     
 
         return new_res
     
-    def train_and_optimize_class(self, data_list, expected_answers, max_dnf_len=4, error_tolerance=0.02, 
-               min_match=0.03, use_approx_dnf=False, redundant_thresh=1.00, elements_count_penalty=1.0, use_compact_opt=False, cnt_out=10, useUnion=False, useExpanded=False):
-        
-        answers = [[0 for _ in range(len(expected_answers))] for _ in range(max(expected_answers)+1)]
+    def train_and_optimize_class(self, data_list, expected_answers, max_dnf_len=4, error_tolerance=0.00, 
+               min_match=0.00, use_approx_dnf=False, redundant_thresh=1.00, elements_count_penalty=1.0, use_compact_opt=False, cnt_out=20, useUnion=False, useExpanded=True):
+
+        # Use Counter to perform group-by count
+        cnt_recs = len(expected_answers)
+        self.item_counts = Counter(expected_answers)
+        classList = sorted([item for item, count in self.item_counts.items()])
+        classList = [(i, classList[i]) for i in range(len(classList))]
+        self.classDic = {c[0]: c[1] for c in classList}
+        self.classDicRev = {c[1]: c[0] for c in classList}
+        answers = [[0 for _ in range(len(expected_answers))] for _ in range(len(classList))]
         for i in range(len(answers[0])):
-            answers[expected_answers[i]][i] = 1
+            answers[self.classDicRev[expected_answers[i]]][i] = 1
+
         self.train_and_optimize_bulk(data_list=data_list, expected_answers=answers, max_dnf_len=max_dnf_len, error_tolerance=error_tolerance, 
                     min_match=min_match, use_approx_dnf=use_approx_dnf, redundant_thresh=redundant_thresh, 
                                      elements_count_penalty=elements_count_penalty, use_compact_opt=use_compact_opt, cnt_out=cnt_out, useUnion=useUnion, useExpanded=useExpanded)
@@ -864,9 +843,7 @@ class Deterministic_Regressor:
         random.shuffle(data)  # Shuffle rows in-place
         split_index = len(data) // splitter  # Integer division for equal or near-equal halves
         self.test_rows = data[:split_index]
-#         print("len(self.test_rows)", len(self.test_rows))
         self.train_rows = data[split_index:]
-#         print("len(self.train_rows)", len(self.train_rows))
     
     def get_train_dat_wo_head(self):
         return [row[:-1] for row in self.train_rows]
@@ -898,10 +875,6 @@ class Deterministic_Regressor:
             return
         answer = actual
         res = predicted
-        
-#         precision = precision_score(answer, res, average=average)
-#         recall = recall_score(answer, res, average=average)
-#         f1 = f1_score(answer, res, average=average, labels=np.unique(res))
         precision = precision_score(answer, res, average=average, labels=np.unique(res))
         recall = recall_score(answer, res, average=average, labels=np.unique(res))
         f1 = f1_score(answer, res, average=average, labels=np.unique(res))

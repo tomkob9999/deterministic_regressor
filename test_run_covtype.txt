@@ -1,0 +1,70 @@
+####### COV TYPE Data Load Only######
+
+from sklearn.datasets import fetch_covtype
+
+
+
+
+####### COV TYPE Data Body ######
+
+import copy
+from sklearn.metrics import precision_score, recall_score, f1_score
+from sklearn.datasets import load_breast_cancer
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import accuracy_score, classification_report
+from sklearn.datasets import load_iris
+from sklearn.datasets import load_wine
+
+
+import time
+
+def measure(start_time):
+    end_time = time.time()
+
+    elapsed_time = end_time - start_time
+    minutes, seconds = divmod(elapsed_time, 60)
+    milliseconds = int(elapsed_time * 1000 % 1000)
+    return f"{int(minutes)}:{str(int(seconds)).zfill(2)}:{str(int(milliseconds)).zfill(3)}"
+           
+start_time = time.time()
+
+
+print("fetch_covtype() finished", measure(start_time))
+start_time = time.time()
+
+
+reg = Deterministic_Regressor()
+
+print("Deterministic_Regressor() finished", measure(start_time))
+start_time = time.time()
+
+reg.prepropcess(covtype_list, by_two=2, splitter=3) # 50% at 5800
+# reg.prepropcess(data_list, by_two=3, splitter=3) #  40% at 17430
+print("prepropcess() finished", measure(start_time))
+start_time = time.time()
+
+# reg.train_and_optimize_class(data_list=reg.get_train_dat_with_head(), expected_answers=reg.get_train_res_wo_head(), error_tolerance=0.03, max_dnf_len=2, min_match=0.01, 
+#                              use_compact_opt=False, useUnion=True, useExpanded=True) # 50%
+# reg.train_and_optimize_class(data_list=reg.get_train_dat_with_head(), expected_answers=reg.get_train_res_wo_head(), error_tolerance=0.05, max_dnf_len=2, min_match=0.05, 
+#                              use_compact_opt=False, useUnion=False, useExpanded=True) # 51.35%
+# reg.train_and_optimize_class(data_list=reg.get_train_dat_with_head(), expected_answers=reg.get_train_res_wo_head(), error_tolerance=0.05, max_dnf_len=2, min_match=0.05, 
+#                              use_compact_opt=False, useUnion=True, useExpanded=True) # 68.97%
+# reg.train_and_optimize_class(data_list=reg.get_train_dat_with_head(), expected_answers=reg.get_train_res_wo_head(), error_tolerance=0.05, max_dnf_len=2, min_match=0.005, 
+#                              use_compact_opt=False, useUnion=True, useExpanded=True) # 51%
+# reg.train_and_optimize_class(data_list=reg.get_train_dat_with_head(), expected_answers=reg.get_train_res_wo_head(), error_tolerance=0.1, max_dnf_len=2, min_match=0.05, 
+#                              use_compact_opt=False, useUnion=False, useExpanded=True) # 56.83%
+reg.train_and_optimize_class(data_list=reg.get_train_dat_with_head(), expected_answers=reg.get_train_res_wo_head(), error_tolerance=0.1, max_dnf_len=2, min_match=0.00, 
+                             use_compact_opt=False, useUnion=False, useExpanded=True) # 54.73%
+# reg.train_and_optimize_class(data_list=reg.get_train_dat_with_head(), expected_answers=reg.get_train_res_wo_head(), error_tolerance=0.05, max_dnf_len=2, min_match=0.05, 
+#                              use_compact_opt=True, useUnion=True, useExpanded=True) # 62.87%
+
+print("train_and_optimize_class() finished", measure(start_time))
+start_time = time.time()
+
+res = reg.solve_with_opt_class(reg.get_test_dat_with_head())
+print("solve_with_opt_class() finished", measure(start_time))
+start_time = time.time()
+
+answer = reg.get_test_res_wo_head()
+Deterministic_Regressor.show_stats(res, answer, average="weighted")
