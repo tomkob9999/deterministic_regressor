@@ -1,7 +1,7 @@
 ### Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 3.1.2
-# Date: 2024/01/26
+# Version: 3.1.3
+# Date: 2024/01/30
 
 import itertools
 from sympy.logic import boolalg
@@ -15,6 +15,7 @@ import random
 from sympy import simplify
 import copy
 from collections import Counter
+import time
 
 class Deterministic_Regressor:
 # This version has no good matches
@@ -44,6 +45,87 @@ class Deterministic_Regressor:
         self.classDic = {}
         self.classDicRev = {}
         self.item_counts = {}
+        
+#     def covariance_matrix_multi(columns, matrix, nvar):
+
+# #         clocks = Clockman()
+# #         clocks.register("newnewdata_T.append")
+# #         clocks.start("newnewdata_T.append")
+# #         clocks.hold("newnewdata_T.append")
+        
+# #         clocks.register("new_cols.append")
+# #         clocks.start("new_cols.append")
+# #         clocks.hold("new_cols.append")
+        
+#         dat = np.copy(matrix)
+#         dat_T = dat.T
+#         newnewdata_T = list(copy.deepcopy(dat_T))
+#         num_loop = nvar-1 if nvar < len(columns) else len(columns)-1
+#         tup_cols = [(c,) for c in columns]
+#         new_cols = [(c,) for c in columns]
+#         start_time = time.time()
+#         for _ in range(num_loop):
+#             if len(dat_T) * len(newnewdata_T) > 10000:
+#                 print("Loop stops at", _+1, "as too many")
+#                 break
+#             newdata_T = list(copy.copy(newnewdata_T))
+#             for i in range(len(dat_T)):
+#                 start_time = time.time()
+# #                 for j in range(i, len(newdata_T), 1):
+#                 for j in range(len(newdata_T)):
+#                     if tup_cols[i][0] in set(list(new_cols[j])) or tuple(sorted(list(new_cols[j] + tup_cols[i]))) in new_cols:
+#                         continue
+                    
+# #                     clocks.hold("newnewdata_T.append")
+#                     newnewdata_T.append(dat_T[i]*newdata_T[j])
+# #                     clocks.restart("newnewdata_T.append")
+# #                     clocks.hold("new_cols.append")
+#                     new_cols.append(tuple(sorted(list(new_cols[j] + tup_cols[i]))))
+# #                     clocks.restart("new_cols.append")
+                    
+# #         clocks.stop("newnewdata_T.append")
+# #         clocks.stop("new_cols.append")
+#         return np.array(newnewdata_T), new_cols
+
+    def covariance_matrix_multi(columns, matrix, nvar):
+
+        dat = np.copy(matrix)
+        dat_T = dat.T
+        newnewdata_T = list(copy.deepcopy(dat_T))
+        lastdata_T = list(copy.deepcopy(dat_T))
+        newdata_T = list(copy.deepcopy(dat_T))
+        num_loop = nvar-1 if nvar < len(columns) else len(columns)-1
+        tup_cols = [(c,) for c in columns]
+        new_cols = [(c,) for c in columns]
+        start_time = time.time()
+        cnt = 0
+        for _ in range(num_loop):
+            if len(dat_T) * len(newnewdata_T) > 100000:
+                print("Loop stops at", _+1, "as too many")
+                break
+            lastdata_T = copy.copy(newnewdata_T)
+            newnewdata_T = []
+            for i in range(len(dat_T)):
+                start_time = time.time()
+                for j in range(len(lastdata_T)):
+                    cnt += 1
+                    if tup_cols[i][0] in set(list(new_cols[j])) or tuple(sorted(list(new_cols[j] + tup_cols[i]))) in new_cols:
+                        continue
+                    newnewdata_T.append(dat_T[i]*newdata_T[j])
+                    new_cols.append(tuple(sorted(list(new_cols[j] + tup_cols[i]))))
+            for n in newnewdata_T:
+                newdata_T.append(n)
+        return np.array(newdata_T), new_cols
+
+    def derive_dnf_stochastic(columns, matrix, nvar, answer, cut_off=0.00):
+        numrecs = len(matrix)
+        new_dat, new_cols = Deterministic_Regressor.covariance_matrix_multi(columns, matrix, nvar)
+        sum_bef = np.array([sum(n) for n in new_dat])
+        sum_aft = np.dot(new_dat, answer)
+        res = np.array([sum_aft[i] / sum_bef[i] if sum_bef[i]/numrecs >= cut_off else 0.00 for i in range(len(sum_aft))])
+        dic_head = {columns[i]:i for i in range(len(columns))}
+        dic_ncols = {n: tuple([dic_head[nn] for nn in n]) for n in new_cols}
+        return res, new_cols, dic_ncols, sum_bef
 
     def remove_supersets(sets_list):
         result = []
@@ -336,7 +418,8 @@ class Deterministic_Regressor:
         head = matrix[0]
         return [head] + [[int(mm) for mm in m] for m in matrix[1:]]
         
-    def train(self, file_path=None, data_list=None, max_dnf_len=4, error_tolerance=0.00, min_match=0.00, use_approx_dnf=False, redundant_thresh=1.00, useExpanded=True):
+    def train(self, file_path=None, data_list=None, max_dnf_len=4, error_tolerance=0.00, min_match=0.00, use_approx_dnf=False, redundant_thresh=1.00, 
+              useExpanded=True, use_stochastic=False, stochastic_min_rating=0.97):
 
         # file_path: input file in tab-delimited text
         # data_list: list matrix data with header in the first row and the result in the last col
@@ -377,8 +460,8 @@ class Deterministic_Regressor:
         numrows = len(inp)-1
         redundant_cols = set()
         for i in range(len(inp[0])-1):
-#             if i in redundant_cols:
-#                 continue
+            if i in redundant_cols:
+                continue
             vals = [row[i] for row in inp[1:]]
             cnts = Counter(vals)
 #             print("vals", vals)
@@ -399,7 +482,8 @@ class Deterministic_Regressor:
                     redundant_cols.add(j)
         print("")
         
-
+        
+        
         
         if max_dnf_len > numvars - 1:
             max_dnf_len = numvars - 1
@@ -417,6 +501,7 @@ class Deterministic_Regressor:
 
         patterns = [(1, 1), (0, 1), (1, 0), (0, 0)] if useExpanded else [(1, 1), (0, 0)]
         for pattern in patterns:
+            print("Starting", pattern)
             dat_t = []
             if pattern[0] == 1:
                 dat_t = [row[:-1] for row in inp[1:]]
@@ -427,77 +512,121 @@ class Deterministic_Regressor:
                 res_t = [row[-1] for row in inp[1:]]
             else:
                 res_t = [0 if row[-1] == 1 else 1 for row in inp[1:]]
-                         
-            inp_t = [copy.deepcopy(inp[0])] + [dat_t[i] + [res_t[i]] for i in range(len(dat_t))]
-            dic_t = dict()
-            for i in range(1, len(inp_t), 1):
-                s = ""
-                for j in range(len(inp_t[i]) - 1):
-                    s += str(int(inp_t[i][j]))
-                truefalse = inp_t[i][len(inp_t[i]) - 1]
-                dic_t[int(s, 2)] = truefalse
+
+            if use_stochastic:
+#                 replace_0 = 0.0001
+#                 replace_1 = 0.9999
+                replace_0 = 0.00001
+                replace_1 = 0.99999
+                for i in range(len(dat_t)):
+                    for j in range(len(dat_t[0])):
+                        dat_t[i][j] = replace_1 if dat_t[i][j] == 1 else replace_0
+                        
+                for i in range(len(res_t)):
+                    res_t[i] = replace_1 if res_t[i] == 1 else replace_0
+
+                cov, ncols, dic_ncols, sum_bef = Deterministic_Regressor.derive_dnf_stochastic(inp[0][:-1], dat_t, max_dnf_len, res_t, min_match)
+                new_covs = [dic_ncols[ncols[i]] for i in range(len(cov)) if cov[i] > stochastic_min_rating]
+                new_covs = Deterministic_Regressor.remove_supersets([set(list(nn)) for nn in new_covs])
+                new_covs = [tuple(nn) for nn in new_covs]
+                
+                for i in range(len(new_covs)):
+                    if pattern[1] == 1:
+                        if pattern[0] == 1:
+                            key = "(" + " & ".join(sorted(list(set([inp[0][ii] for ii in new_covs[i]])))) + ")"
+#                             print("key", key)
+                            dnf_perf.append(sorted(list(set([inp[0][ii] for ii in new_covs[i]]))))
+                        else:
+                            key = "(not (" + ") & not (".join(sorted(list(set([inp[0][ii] for ii in new_covs[i]])))) + "))" 
+#                             print("key", key)
+                            dnf_perf.append(sorted(list(set(["not (" + inp[0][ii] + ")" for ii in new_covs[i]]))))
+                        self.true_confidence[key] = sum_bef[i]
+
+                    else:
+                        raw_perf_n.append([ii for ii in new_covs[i]])
+#                         raw_perf2_n.append(b)  
+                        if pattern[0] == 1:
+                            key = "(" + " & ".join(sorted(list(set([inp[0][ii] for ii in new_covs[i]])))) + ")"
+#                             print("key", key)
+                            dnf_perf_n.append(sorted(list(set([inp[0][ii] for ii in new_covs[i]]))))
+                        else:
+                            key = "(not (" + ") & not (".join(sorted(list(set([inp[0][ii] for ii in new_covs[i]])))) + "))" 
+#                             print("key", key)
+                            dnf_perf_n.append(sorted(list(set(["not (" + inp[0][ii] + ")" for ii in new_covs[i]]))))
+                        self.false_confidence[key] = sum_bef[i]
+                            
+            else:
+                                         
+                inp_t = [copy.deepcopy(inp[0])] + [dat_t[i] + [res_t[i]] for i in range(len(dat_t))]
+                dic_t = dict()
+                for i in range(1, len(inp_t), 1):
+                    s = ""
+                    for j in range(len(inp_t[i]) - 1):
+                        s += str(int(inp_t[i][j]))
+                    truefalse = inp_t[i][len(inp_t[i]) - 1]
+                    dic_t[int(s, 2)] = truefalse
 
                 
-            for s in range(max_dnf_len):
-                len_dnf = s + 1
+                for s in range(max_dnf_len):
+                    len_dnf = s + 1
 
-                l = [ii for ii in range(numvars)]
-                p_list = list(itertools.combinations(l, len_dnf))
+                    l = [ii for ii in range(numvars)]
+                    p_list = list(itertools.combinations(l, len_dnf))
 
-                p_list = [p for p in p_list if not any([pp in redundant_cols for pp in p])]
+                    p_list = [p for p in p_list if not any([pp in redundant_cols for pp in p])]
 
-                print(str(len_dnf) + " variable patterns")
-                if len(p_list) > MAX_REPS:
-                    print("Skipping because " + str(len(p_list)) + " combinations is too many")
-                    break
-                true_test_pass = True
-                for i in range(len(p_list)):
-                    match_and_break = False
-                    b = Deterministic_Regressor.convTuple2bin(p_list[i], numvars)
-                    if pattern[1] == 1:
-                        for p in raw_perf2:
-                            if p == b & p:
-                                match_and_break = True
-                                break
-                    else:
-                        for p in raw_perf2_n:
-                            if p == b & p:
-                                match_and_break = True
-                                break
-                    if match_and_break:
-                        continue
-                    r = [v for k,v in dic_t.items() if k & b == b]
-                    if len(r) == 0:
-                        continue
-                    cnt_all = len([f for f in r])
-                    cnt_unmatch = len([f for f in r if f == 0])
-                    if cnt_unmatch/cnt_all > error_tolerance:
-                        continue
-                    if (cnt_all - cnt_unmatch)/numrows < min_match:
-                        continue
-
-                    if pattern[1] == 1:
-                        raw_perf.append([ii for ii in p_list[i]])
-                        raw_perf2.append(b)
-
-                        if pattern[0] == 1:
-                            key = "(" + " & ".join(sorted(list(set([inp[0][ii] for ii in p_list[i]])))) + ")"
-                            dnf_perf.append(sorted(list(set([inp[0][ii] for ii in p_list[i]]))))
+                    print(str(len_dnf) + " variable patterns")
+                    if len(p_list) > MAX_REPS:
+                        print("Skipping because " + str(len(p_list)) + " combinations is too many")
+                        break
+                    true_test_pass = True
+                    for i in range(len(p_list)):
+                        match_and_break = False
+                        b = Deterministic_Regressor.convTuple2bin(p_list[i], numvars)
+                        if pattern[1] == 1:
+                            for p in raw_perf2:
+                                if p == b & p:
+                                    match_and_break = True
+                                    break
                         else:
-                            key = "(not (" + ") & not (".join(sorted(list(set([inp[0][ii] for ii in p_list[i]])))) + "))" 
-                            dnf_perf.append(sorted(list(set(["not (" + inp[0][ii] + ")" for ii in p_list[i]]))))
-                        self.true_confidence[key] = cnt_all - cnt_unmatch
-                        
-                    else:
-                        raw_perf_n.append([ii for ii in p_list[i]])
-                        raw_perf2_n.append(b)  
-                        if pattern[0] == 1:
-                            key = "(" + " & ".join(sorted(list(set([inp[0][ii] for ii in p_list[i]])))) + ")"
-                            dnf_perf_n.append(sorted(list(set([inp[0][ii] for ii in p_list[i]]))))
+                            for p in raw_perf2_n:
+                                if p == b & p:
+                                    match_and_break = True
+                                    break
+                        if match_and_break:
+                            continue
+                        r = [v for k,v in dic_t.items() if k & b == b]
+                        if len(r) == 0:
+                            continue
+                        cnt_all = len([f for f in r])
+                        cnt_unmatch = len([f for f in r if f == 0])
+                        if cnt_unmatch/cnt_all > error_tolerance:
+                            continue
+                        if (cnt_all - cnt_unmatch)/numrows < min_match:
+                            continue
+
+                        if pattern[1] == 1:
+                            raw_perf.append([ii for ii in p_list[i]])
+                            raw_perf2.append(b)
+
+                            if pattern[0] == 1:
+                                key = "(" + " & ".join(sorted(list(set([inp[0][ii] for ii in p_list[i]])))) + ")"
+                                dnf_perf.append(sorted(list(set([inp[0][ii] for ii in p_list[i]]))))
+                            else:
+                                key = "(not (" + ") & not (".join(sorted(list(set([inp[0][ii] for ii in p_list[i]])))) + "))" 
+                                dnf_perf.append(sorted(list(set(["not (" + inp[0][ii] + ")" for ii in p_list[i]]))))
+                            self.true_confidence[key] = cnt_all - cnt_unmatch
+
                         else:
-                            key = "(not (" + ") & not (".join(sorted(list(set([inp[0][ii] for ii in p_list[i]])))) + "))" 
-                            dnf_perf_n.append(sorted(list(set(["not (" + inp[0][ii] + ")" for ii in p_list[i]]))))
-                        self.false_confidence[key] = cnt_all - cnt_unmatch
+                            raw_perf_n.append([ii for ii in p_list[i]])
+                            raw_perf2_n.append(b)  
+                            if pattern[0] == 1:
+                                key = "(" + " & ".join(sorted(list(set([inp[0][ii] for ii in p_list[i]])))) + ")"
+                                dnf_perf_n.append(sorted(list(set([inp[0][ii] for ii in p_list[i]]))))
+                            else:
+                                key = "(not (" + ") & not (".join(sorted(list(set([inp[0][ii] for ii in p_list[i]])))) + "))" 
+                                dnf_perf_n.append(sorted(list(set(["not (" + inp[0][ii] + ")" for ii in p_list[i]]))))
+                            self.false_confidence[key] = cnt_all - cnt_unmatch
 
         
         self.all_confidence = copy.deepcopy(self.true_confidence)
@@ -747,7 +876,7 @@ class Deterministic_Regressor:
 
     def train_and_optimize(self, data_list=None, max_dnf_len=4, error_tolerance=0.00, 
                        min_match=0.00, use_approx_dnf=False, redundant_thresh=1.00, elements_count_penalty=1.0, 
-                           use_compact_opt=False, cnt_out=20, useUnion=False, useExpanded=True):
+                           use_compact_opt=False, cnt_out=20, useUnion=False, useExpanded=True, use_stochastic=False, stochastic_min_rating=0.97):
         
         print("Training started...")
         
@@ -759,7 +888,8 @@ class Deterministic_Regressor:
         train_inp = [headers] + train_data
         
         self.train(data_list=train_inp, max_dnf_len=max_dnf_len, 
-                        error_tolerance=error_tolerance, min_match=min_match, use_approx_dnf=use_approx_dnf, redundant_thresh=redundant_thresh, useExpanded=useExpanded)
+                        error_tolerance=error_tolerance, min_match=min_match, use_approx_dnf=use_approx_dnf, redundant_thresh=redundant_thresh, 
+                   useExpanded=useExpanded, use_stochastic=use_stochastic, stochastic_min_rating=stochastic_min_rating)
 
         print("Optimization started...")
         inp = [headers] + valid_data
@@ -775,7 +905,8 @@ class Deterministic_Regressor:
             return self.optimize_params(inp, answer, elements_count_penalty=1.0, useUnion=useUnion)
     
     def train_and_optimize_bulk(self, data_list, expected_answers, max_dnf_len=4, error_tolerance=0.02,  
-                   min_match=0.03, use_approx_dnf=False, redundant_thresh=1.00, elements_count_penalty=1.0, use_compact_opt=False, cnt_out=20, useUnion=False, useExpanded=True):
+                   min_match=0.03, use_approx_dnf=False, redundant_thresh=1.00, elements_count_penalty=1.0, use_compact_opt=False, cnt_out=20, useUnion=False, 
+                                useExpanded=True, use_stochastic=False, stochastic_min_rating=0.97):
 
         self.children = [Deterministic_Regressor() for _ in range(len(expected_answers))]
         
@@ -798,7 +929,8 @@ class Deterministic_Regressor:
                 d_list[k+1].append(expected_answers[i][k])
             self.children[i].train_and_optimize(data_list=d_list, max_dnf_len=max_dnf_len, error_tolerance=error_tolerance, 
                     min_match=min_match, use_approx_dnf=use_approx_dnf, redundant_thresh=redundant_thresh, 
-                                                elements_count_penalty=elements_count_penalty, use_compact_opt=use_compact_opt, cnt_out=cnt_out, useUnion=useUnion, useExpanded=useExpanded)
+                        elements_count_penalty=elements_count_penalty, use_compact_opt=use_compact_opt, cnt_out=cnt_out, useUnion=useUnion, 
+                        useExpanded=useExpanded, use_stochastic=use_stochastic, stochastic_min_rating=stochastic_min_rating)
 
             
             
@@ -834,7 +966,8 @@ class Deterministic_Regressor:
         return new_res
     
     def train_and_optimize_class(self, data_list, expected_answers, max_dnf_len=4, error_tolerance=0.00, 
-               min_match=0.00, use_approx_dnf=False, redundant_thresh=1.00, elements_count_penalty=1.0, use_compact_opt=False, cnt_out=20, useUnion=False, useExpanded=True):
+               min_match=0.00, use_approx_dnf=False, redundant_thresh=1.00, elements_count_penalty=1.0, use_compact_opt=False, cnt_out=20, useUnion=False, 
+                                 useExpanded=True, use_stochastic=False, stochastic_min_rating=0.97):
 
         # Use Counter to perform group-by count
         cnt_recs = len(expected_answers)
@@ -849,7 +982,8 @@ class Deterministic_Regressor:
 
         self.train_and_optimize_bulk(data_list=data_list, expected_answers=answers, max_dnf_len=max_dnf_len, error_tolerance=error_tolerance, 
                     min_match=min_match, use_approx_dnf=use_approx_dnf, redundant_thresh=redundant_thresh, 
-                                     elements_count_penalty=elements_count_penalty, use_compact_opt=use_compact_opt, cnt_out=cnt_out, useUnion=useUnion, useExpanded=useExpanded)
+                                     elements_count_penalty=elements_count_penalty, use_compact_opt=use_compact_opt, cnt_out=cnt_out, useUnion=useUnion, 
+                                     useExpanded=useExpanded, use_stochastic=use_stochastic, stochastic_min_rating=stochastic_min_rating)
     
     def prepropcess(self, whole_rows, by_two, splitter=3):
         self.whole_rows = self.clean_and_discretize(whole_rows, by_two)
