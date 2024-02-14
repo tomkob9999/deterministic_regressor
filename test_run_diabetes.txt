@@ -1,0 +1,58 @@
+####### Diabetes Data ######
+
+from sklearn.datasets import load_diabetes
+     
+start_time = time.time()
+
+
+
+#### DIABETES ######
+diabetes_data = load_diabetes()
+target_list = list(diabetes_data.target)
+diabetes_list = list(diabetes_data.data)
+diabetes_list = [list(diabetes_list[i]) + [target_list[i]] for i in range(len(diabetes_list))]
+diabetes_list = [list(diabetes_data.feature_names) + ["res"]] + diabetes_list
+#### DIABETES ######
+
+
+print("load_diabetes() finished", measure(start_time))
+start_time = time.time()
+
+
+reg = Deterministic_Regressor()
+
+print("Deterministic_Regressor() finished", measure(start_time))
+start_time = time.time()
+
+
+# print("diabetes_list[0]", diabetes_list[0])
+# print("diabetes_list[1]", diabetes_list[1])
+# winners = reg.prepropcess_continous(diabetes_list, by_two=2, splitter=3, max_reg=5, thresh=0.4, add_quads=True, omit_similar=False, max_vars=4, include_all=True)
+winners = reg.prepropcess_continous(diabetes_list, by_two=2, splitter=3, max_reg=5, thresh=0.25, add_quads=True, omit_similar=True, max_vars=4, include_all=False)
+print("prepropcess_continous() finished", measure(start_time))
+start_time = time.time()
+
+print("winners", winners)
+# print("reg.get_train_dat_with_head()[0]", reg.get_train_dat_with_head()[0])
+# print("reg.get_train_dat_with_head()[1]", reg.get_train_dat_with_head()[1])
+
+reg.train_and_optimize_class(data_list=reg.get_train_dat_with_head(), expected_answers=winners, error_tolerance=0.05, max_dnf_len=3, min_match=0.03, 
+                             use_compact_opt=True, useUnion=False) #  91.58%
+
+res = reg.solve_with_opt_continuous(reg.get_test_dat_with_head(), reg.get_test_dat_org_wo_head())
+print("solve_with_opt_continuous() finished", measure(start_time))
+start_time = time.time()
+
+Deterministic_Regressor.show_mse(res, reg.get_test_res_org_wo_head())
+
+# print("reg.get_test_res_org_wo_head()", reg.get_test_res_org_wo_head())
+# print("res", res)
+
+res = reg.solve_with_highest(reg.get_test_dat_org_wo_head())
+print("solve_with_highest() finished", measure(start_time))
+start_time = time.time()
+
+Deterministic_Regressor.show_mse(res, reg.get_test_res_org_wo_head())
+
+# print("reg.get_test_res_org_wo_head()", reg.get_test_res_org_wo_head())
+# print("res", res)
