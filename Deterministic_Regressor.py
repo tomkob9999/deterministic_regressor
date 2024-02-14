@@ -1,7 +1,7 @@
 ### Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 3.1.3
-# Date: 2024/01/30
+# Version: 3.1.5
+# Date: 2024/02/14
 
 import itertools
 from sympy.logic import boolalg
@@ -16,6 +16,9 @@ from sympy import simplify
 import copy
 from collections import Counter
 import time
+from itertools import combinations
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error, r2_score
 
 class Deterministic_Regressor:
 # This version has no good matches
@@ -42,13 +45,22 @@ class Deterministic_Regressor:
         self.whole_rows = []
         self.test_rows = []
         self.train_rows = []
+
+        self.whole_rows_org = []
+        self.test_rows_org = []
+        self.train_rows_org = []
+        
         self.classDic = {}
         self.classDicRev = {}
         self.item_counts = {}
         
+        self.combo_list = []
+        self.predictors = []
+        self.target_cols = []
+        
 #     def covariance_matrix_multi(columns, matrix, nvar):
 
-# #         clocks = Clockman()
+# #         clocks = clockman()
 # #         clocks.register("newnewdata_T.append")
 # #         clocks.start("newnewdata_T.append")
 # #         clocks.hold("newnewdata_T.append")
@@ -86,6 +98,55 @@ class Deterministic_Regressor:
 # #         clocks.stop("newnewdata_T.append")
 # #         clocks.stop("new_cols.append")
 #         return np.array(newnewdata_T), new_cols
+
+    def IsNonBinaryNumeric(n):
+        try:
+            return any([nn != 1 and nn != 0 and nn < float('inf') for nn in n])
+        except Exception as e:
+            return False
+
+
+    def calculate_correlation_matrix(data):
+        """Calculate the correlation matrix for the given data."""
+        standardized_data = (data - np.mean(data, axis=0)) / np.std(data, axis=0)
+        n = data.shape[0]
+        corr_matrix = np.dot(standardized_data.T, standardized_data) / n
+        return corr_matrix
+
+
+    def remove_highly_correlated_columns(data, threshold=0.8):
+        """Remove columns with strong correlations."""
+        corr_matrix = Deterministic_Regressor.calculate_correlation_matrix(data)
+        columns_to_remove = set()
+
+        for i in range(corr_matrix.shape[0]):
+            for j in range(i+1, corr_matrix.shape[1]):
+                if abs(corr_matrix[i, j]) > threshold:
+                    # Mark the column with the higher index for removal
+                    columns_to_remove.add(j)
+
+        print("columns_to_remove", columns_to_remove)
+        # Create a new array without the highly correlated columns
+        reduced_data = np.delete(data, list(columns_to_remove), axis=1)
+        return reduced_data
+
+
+    def give_highly_correlated_columns(data, target_cols, threshold=0.95):
+        """Remove columns with strong correlations."""
+        corr_matrix = Deterministic_Regressor.calculate_correlation_matrix(data)
+        columns_to_remove = {}
+
+        for i in range(corr_matrix.shape[0]):
+            if i in target_cols:
+                continue
+            for j in range(i+1, corr_matrix.shape[1]):
+                if j in target_cols:
+                    continue
+                if abs(corr_matrix[i, j]) > threshold:
+                    # Mark the column with the higher index for removal
+                    columns_to_remove[j] = i
+        return columns_to_remove
+
 
     def covariance_matrix_multi(columns, matrix, nvar):
 
@@ -517,7 +578,8 @@ class Deterministic_Regressor:
 #                 replace_0 = 0.0001
 #                 replace_1 = 0.9999
                 replace_0 = 0.00001
-                replace_1 = 0.99999
+#                 replace_1 = 0.99999
+                replace_1 = 1.
                 for i in range(len(dat_t)):
                     for j in range(len(dat_t[0])):
                         dat_t[i][j] = replace_1 if dat_t[i][j] == 1 else replace_0
@@ -965,6 +1027,54 @@ class Deterministic_Regressor:
 
         return new_res
     
+    def solve_with_opt_continuous(self, inp_p, inp_p_org):
+        
+#         res = self.solve_with_opt_bulk(self.get_test_dat_with_head())
+        res = self.solve_with_opt_bulk(inp_p)
+
+        dic_f1 = {i: self.children[i].opt_f1 for i in range(len(self.children))}
+
+        len_rows = len(res[0])
+        len_res = len(res)
+        new_res = [0] * len_rows
+        
+#         inp_p_org_np = np.array(inp_p_org)
+        
+        winners = []
+        for i in range(len_rows):
+            numbers = [s[1] for s in sorted([(random.random()*dic_f1[i], i) for i in range(len_res)], reverse=True)]
+            for k in range(len(numbers)):
+                if res[numbers[k]][i] == 1:
+        #                     new_res[i] = self.classDic[numbers[k]]
+                    cl = self.classDic[numbers[k]]
+#                     new_res[i] = self.predictors[0].predict([[c for i, c in enumerate(self.get_test_dat_org_wo_head()[i]) if i in self.combo_list[0]]])[0]
+#                     new_res[i] = self.predictors[cl].predict([[c for i, c in enumerate(self.get_test_dat_org_wo_head()[i]) if i in self.combo_list[cl]]])[0]
+                    new_res[i] = self.predictors[cl].predict([[c for i, c in enumerate(inp_p_org[i]) if i in self.combo_list[cl]]])[0]
+                    winners.append(cl)
+#                     new_res[i] = self.predictors[cl].predict([inp_p_org_np[i, self.combo_list[cl]]])[0]
+                    break
+                if k == len(numbers) - 1:
+        #                     new_res[i] = self.classDic[numbers[k]]
+                    cl = reg.classDic[numbers[k]]
+                    winners.append(cl)
+#                     new_res[i] = self.predictors[0].predict([[c for i, c in enumerate(self.get_test_dat_org_wo_head()[i]) if i in self.combo_list[0]]])[0]
+                    new_res[i] = self.predictors[cl].predict([[c for i, c in enumerate(inp_p_org[i]) if i in self.combo_list[cl]]])[0]
+#                     new_res[i] = self.predictors[cl].predict([inp_p_org_np[i, self.combo_list[cl]]])[0]
+
+#         print("final winners", winners)
+        return new_res
+    
+    def solve_with_highest(self, inp_p_org):
+        
+        new_res = [0] * len(inp_p_org)
+        
+        for i in range(len(inp_p_org)):
+            
+            new_res[i] = self.predictors[0].predict([[c for i, c in enumerate(inp_p_org[i]) if i in self.combo_list[0]]])[0]
+            
+        return new_res
+    
+    
     def train_and_optimize_class(self, data_list, expected_answers, max_dnf_len=4, error_tolerance=0.00, 
                min_match=0.00, use_approx_dnf=False, redundant_thresh=1.00, elements_count_penalty=1.0, use_compact_opt=False, cnt_out=20, useUnion=False, 
                                  useExpanded=True, use_stochastic=False, stochastic_min_rating=0.97):
@@ -994,6 +1104,50 @@ class Deterministic_Regressor:
         self.test_rows = data[:split_index]
         self.train_rows = data[split_index:]
     
+    def prepropcess_continous(self, whole_rows, by_two, splitter=3, max_reg=8, thresh=0.3, add_quads=False, max_vars=3, omit_similar=False, include_all=False):
+        whole_rows_org = copy.deepcopy(whole_rows)
+        headers_org = whole_rows_org[0]
+        data_org = whole_rows_org[1:]
+#         print("headers_org", headers_org)
+#         print("data_org", data_org)
+        random.shuffle(data_org)  # Shuffle rows in-place
+        
+        self.whole_rows_org = [headers_org] + data_org
+#         print("self.whole_rows_org[0]", self.whole_rows_org[0])
+#         print("self.whole_rows_org[1]", self.whole_rows_org[1])
+        self.whole_rows = self.clean_and_discretize(self.whole_rows_org, by_two)
+        
+        headers = self.whole_rows[0]
+        data = self.whole_rows[1:]
+
+        split_index = len(data) // splitter  # Integer division for equal or near-equal halves
+        self.test_rows = data[:split_index]
+        self.train_rows = data[split_index:]
+        
+        self.test_rows_org = data_org[:split_index]
+        self.train_rows_org = data_org[split_index:]
+        if add_quads:
+            target_cols = [i for i in range(len(data_org[0])-1) if Deterministic_Regressor.IsNonBinaryNumeric([row[i] for row in data_org])]
+            print("target_cols", target_cols)
+            X = copy.deepcopy(self.test_rows_org)
+#             for j, xxx in enumerate(X[0]):
+            for j in range(len(X[0])-1):
+                if j not in target_cols:
+                    continue
+                for i, xx in enumerate(X):
+#                     self.test_rows_org[i].append(X[i][j]**2)
+                    self.test_rows_org[i].insert(-1, X[i][j]**2)
+            X = copy.deepcopy(self.train_rows_org)
+#             for j, xxx in enumerate(X[0]):
+            for j in range(len(X[0])-1):
+                if j not in target_cols:
+                    continue
+                for i, xx in enumerate(X):
+#                     self.train_rows_org[i].append(X[i][j]**2)
+                    self.train_rows_org[i].insert(-1, X[i][j]**2)
+
+        return self.continuous_regress(self.get_train_dat_org_wo_head(), self.get_train_res_org_wo_head(), max_reg=max_reg, thresh=thresh, max_vars=max_vars, omit_similar=omit_similar, include_all=include_all)
+    
     def get_train_dat_wo_head(self):
         return [row[:-1] for row in self.train_rows]
     def get_train_res_wo_head(self):
@@ -1004,7 +1158,6 @@ class Deterministic_Regressor:
         return self.train_rows
     def get_train_datres_with_head(self):
         return [self.whole_rows[0]] + self.train_rows
-    
     def get_test_dat_wo_head(self):
         return [row[:-1] for row in self.test_rows]
     def get_test_res_wo_head(self):
@@ -1016,7 +1169,27 @@ class Deterministic_Regressor:
     def get_test_datres_with_head(self):
         return [self.whole_rows[0]] + self.test_rows
     
-
+    def get_train_dat_org_wo_head(self):
+        return [row[:-1] for row in self.train_rows_org]
+    def get_train_res_org_wo_head(self):
+        return [row[-1] for row in self.train_rows_org]
+    def get_train_dat_org_with_head(self):
+        return [self.whole_rows_org[0][:-1]] + [row[:-1] for row in self.train_rows_org]
+    def get_train_datres_org_wo_head(self):
+        return self.train_rows_org
+    def get_train_datres_org_with_head(self):
+        return [self.whole_rows_org[0]] + self.train_rows_org
+    def get_test_dat_org_wo_head(self):
+        return [row[:-1] for row in self.test_rows_org]
+    def get_test_res_org_wo_head(self):
+        return [row[-1] for row in self.test_rows_org]
+    def get_test_dat_org_with_head(self):
+        return [self.whole_rows_org[0][:-1]] + [row[:-1] for row in self.test_rows_org]
+    def get_test_datres_org_wo_head(self):
+        return self.test_rows_org[1:]
+    def get_test_datres_org_with_head(self):
+        return [self.whole_rows_org[0]] + self.test_rows_org
+    
     def show_stats(predicted, actual, average="weighted", elements_count_penalty=1.0):
         
         if len(predicted) != len(actual):
@@ -1037,3 +1210,125 @@ class Deterministic_Regressor:
         print("")
         print("##############")
         print("")
+
+
+    def show_mse(y_test, y_pred):
+        #         # The mean squared error
+        print('Mean squared error: %.2f' % mean_squared_error(y_test, y_pred))
+        
+    def continuous_regress(self, X_train, y_train, X_test=None, y_test=None, max_reg=8, thresh=0.3, max_vars=3, omit_similar=False, include_all=False):
+
+    #     if test_size == 0.0:
+    #         X_train, X_test, y_train, y_test = X, X, y, y
+    #     else:
+    #         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size)
+
+        if X_test is None:
+            X_test = X_train
+            y_test = y_train
+
+        target_cols = [i for i, xx in enumerate(X_train[0]) if Deterministic_Regressor.IsNonBinaryNumeric([row[i] for row in X_train])]
+        self.target_cols = target_cols
+        X = np.array([np.array(x) for x in X_train])
+        X_test = np.array([np.array(x) for x in X_test])
+
+        numbers = list(range(len(X_train[0])))
+
+        col_to_ignore = Deterministic_Regressor.give_highly_correlated_columns(X, target_cols)
+
+    #     preds_all = []
+    #     error_all = []
+    #     dic_preds_all = {}
+        dic_errors_all = {}
+        dic_sme = {}
+        dic_ind = {}
+    #     dic_ind_r = {}
+        predictors = {}
+        # Generate all combinations of two numbers from the list
+
+        if include_all:
+            combo = tuple(target_cols)
+            model = LinearRegression()
+            model.fit(X[:, combo], y_train)
+            y_pred = model.predict(X_test[:, combo])
+            dic_errors_all[combo] = np.abs(y_pred - y_test)
+            predictors[combo] = model
+            dic_sme[combo] = mean_squared_error(y_test, y_pred)
+                
+        ind_all = 0
+        numloop = max_vars if len(target_cols) > max_vars else len(target_cols)
+        for i in range(numloop):
+#         for i in range(3):
+            combinations_of_two = list(combinations(numbers, i+1))
+
+            # Print the combinations
+            for combo in combinations_of_two:
+                dic_ind[ind_all] = combo
+    #             dic_ind_r[combo] = ind_all
+                ind_all += 1
+
+                if any([c in col_to_ignore for c in combo]):
+                    continue
+                if not all([c in target_cols for c in combo]):
+                    continue
+
+                # Create a linear regression model
+                model = LinearRegression()
+
+                # Train the model using the training sets
+                model.fit(X[:, combo], y_train)
+
+                # Make predictions using the testing set
+                y_pred = model.predict(X_test[:, combo])
+#                 y_pred = model.predict([[xx for i, xx in enumerate(x) if i in combo] for x in X_test])
+                
+    #             dic_preds_all[combo] = y_pred
+    #             preds_all.append(y_pred)
+    #             error_all.append(np.abs(y_pred - y_test))
+                dic_errors_all[combo] = np.abs(y_pred - y_test)
+                predictors[combo] = model
+                # The coefficients
+                # The mean squared error
+                dic_sme[combo] = mean_squared_error(y_test, y_pred)
+        
+        i = 0
+        already_set = set()
+        already_list = list()
+        min_sme = -1
+        already_tup = ()
+        for f in sorted([(v, k) for k, v in dic_sme.items()]):
+            if i == 0:
+                min_sme = f[0]
+            elif min_sme+min_sme*thresh < f[0]:
+                break
+            if i == max_reg:
+                break
+        #     print("candidate", f[1])
+#             if omit_similar and any([sum([1 if k in a else 0 for k in f[1]]) > 1 for a in already_set]):
+            if omit_similar and not include_all and any([sum([1 if k in a else 0 for k in f[1]]) > len(f[1]) - 2 for a in already_set]):
+                    continue
+            already_set.add(f[1])
+            print("key", f[1], "sme", f[0])
+            already_list.append(f[1])
+            i += 1
+
+
+        winner_predictors = [predictors[a] for i, a in enumerate(already_list)]
+        self.combo_list = already_list
+        self.predictors = winner_predictors
+
+        winners = [0] * len(y_test)
+        for i, y in enumerate(y_test):
+            lowest = float("inf")
+            lowest_ind = float("inf")
+            for j, a in enumerate(already_list):
+#                 print("a", a)
+#                 print("dic_errors_all[a][i]", dic_errors_all[a][i])
+#                 print("lowest", lowest)
+                if dic_errors_all[a][i] < lowest:
+                    lowest_ind = j
+                    lowest = dic_errors_all[a][i]
+#             print("winner", already_list[lowest_ind])
+            winners[i] = lowest_ind
+
+        return winners
