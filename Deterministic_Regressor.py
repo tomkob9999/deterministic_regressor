@@ -1,12 +1,11 @@
 ### Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 3.1.5
-# Date: 2024/02/14
+# Version: 3.1.6
+# Date: 2024/02/15
 
 import itertools
 from sympy.logic import boolalg
 import numpy as np
-
 import sklearn.datasets
 from sklearn.metrics import precision_score, recall_score, f1_score, confusion_matrix
 from sklearn.model_selection import train_test_split
@@ -19,7 +18,7 @@ import time
 from itertools import combinations
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score
-
+    
 class Deterministic_Regressor:
 # This version has no good matches
 # Instead, all true matches are first added, and some are removed when 
@@ -1062,6 +1061,10 @@ class Deterministic_Regressor:
 #                     new_res[i] = self.predictors[cl].predict([inp_p_org_np[i, self.combo_list[cl]]])[0]
 
 #         print("final winners", winners)
+        count_dict = Counter(winners)
+        for f in sorted([(v, k) for k, v in count_dict.items()], reverse=True):
+            print(f"{reg.combo_list[f[1]]} occurs {f[0]} times.")
+
         return new_res
     
     def solve_with_highest(self, inp_p_org):
@@ -1104,7 +1107,7 @@ class Deterministic_Regressor:
         self.test_rows = data[:split_index]
         self.train_rows = data[split_index:]
     
-    def prepropcess_continous(self, whole_rows, by_two, splitter=3, max_reg=8, thresh=0.3, add_quads=False, max_vars=3, omit_similar=False, include_all=False):
+    def prepropcess_continous(self, whole_rows, by_two, splitter=3, max_reg=8, thresh=0.3, add_quads=False, max_vars=3, omit_similar=False, include_all=True):
         whole_rows_org = copy.deepcopy(whole_rows)
         headers_org = whole_rows_org[0]
         data_org = whole_rows_org[1:]
