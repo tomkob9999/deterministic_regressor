@@ -24,7 +24,7 @@ print("Deterministic_Regressor() finished", measure(start_time))
 start_time = time.time()
 
 # winners = reg.prepropcess_continous(housing_list, by_two=2, splitter=3, max_reg=5, thresh=0.25, add_quads=True, omit_similar=True, max_vars=3, include_all=False)
-winners = reg.prepropcess_continous(housing_list, by_two=2, splitter=3, max_reg=5, thresh=0.25, add_quads=True, omit_similar=False, max_vars=3, include_all=False)
+winners = reg.prepropcess_continous(housing_list, by_two=2, splitter=3, max_reg=5, thresh=0.25, add_quads=True, omit_similar=True, max_vars=3, include_all=True) # 0.80
 print("prepropcess_continous() finished", measure(start_time))
 start_time = time.time()
 
@@ -41,7 +41,7 @@ print("len(reg.get_train_dat_wo_head())", len(reg.get_train_dat_wo_head()))
 print("len(reg.get_test_dat_wo_head())", len(reg.get_test_dat_wo_head()))
 
 reg.train_and_optimize_class(data_list=reg.get_train_dat_with_head(), expected_answers=winners, error_tolerance=0.05, max_dnf_len=2, min_match=0.001, 
-                             use_compact_opt=True, useUnion=False) #  91.58%
+                             use_compact_opt=True, useUnion=False) # 0.80
 
 res = reg.solve_with_opt_continuous(reg.get_test_dat_with_head(), reg.get_test_dat_org_wo_head())
 print("solve_with_opt_continuous() finished", measure(start_time))
