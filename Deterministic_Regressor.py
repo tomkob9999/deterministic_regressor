@@ -1,6 +1,6 @@
 ### Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 3.2.0
+# Version: 3.2.1
 # Date: 2024/02/15
 
 import itertools
@@ -19,6 +19,7 @@ from itertools import combinations
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import ElasticNet
     
 class Deterministic_Regressor:
 # This version has no good matches
@@ -57,47 +58,7 @@ class Deterministic_Regressor:
         self.combo_list = []
         self.predictors = []
         self.target_cols = []
-        
-#     def covariance_matrix_multi(columns, matrix, nvar):
 
-# #         clocks = clockman()
-# #         clocks.register("newnewdata_T.append")
-# #         clocks.start("newnewdata_T.append")
-# #         clocks.hold("newnewdata_T.append")
-        
-# #         clocks.register("new_cols.append")
-# #         clocks.start("new_cols.append")
-# #         clocks.hold("new_cols.append")
-        
-#         dat = np.copy(matrix)
-#         dat_T = dat.T
-#         newnewdata_T = list(copy.deepcopy(dat_T))
-#         num_loop = nvar-1 if nvar < len(columns) else len(columns)-1
-#         tup_cols = [(c,) for c in columns]
-#         new_cols = [(c,) for c in columns]
-#         start_time = time.time()
-#         for _ in range(num_loop):
-#             if len(dat_T) * len(newnewdata_T) > 10000:
-#                 print("Loop stops at", _+1, "as too many")
-#                 break
-#             newdata_T = list(copy.copy(newnewdata_T))
-#             for i in range(len(dat_T)):
-#                 start_time = time.time()
-# #                 for j in range(i, len(newdata_T), 1):
-#                 for j in range(len(newdata_T)):
-#                     if tup_cols[i][0] in set(list(new_cols[j])) or tuple(sorted(list(new_cols[j] + tup_cols[i]))) in new_cols:
-#                         continue
-                    
-# #                     clocks.hold("newnewdata_T.append")
-#                     newnewdata_T.append(dat_T[i]*newdata_T[j])
-# #                     clocks.restart("newnewdata_T.append")
-# #                     clocks.hold("new_cols.append")
-#                     new_cols.append(tuple(sorted(list(new_cols[j] + tup_cols[i]))))
-# #                     clocks.restart("new_cols.append")
-                    
-# #         clocks.stop("newnewdata_T.append")
-# #         clocks.stop("new_cols.append")
-#         return np.array(newnewdata_T), new_cols
 
     def IsNonBinaryNumeric(n):
         try:
@@ -1056,23 +1017,15 @@ class Deterministic_Regressor:
             numbers = [s[1] for s in sorted([(random.random()*dic_f1[i], i) for i in range(len_res)], reverse=True)]
             for k in range(len(numbers)):
                 if res[numbers[k]][i] == 1:
-        #                     new_res[i] = self.classDic[numbers[k]]
                     cl = self.classDic[numbers[k]]
-#                     new_res[i] = self.predictors[0].predict([[c for i, c in enumerate(self.get_test_dat_org_wo_head()[i]) if i in self.combo_list[0]]])[0]
-#                     new_res[i] = self.predictors[cl].predict([[c for i, c in enumerate(self.get_test_dat_org_wo_head()[i]) if i in self.combo_list[cl]]])[0]
                     new_res[i] = self.predictors[cl].predict([[c for i, c in enumerate(inp_p_org[i]) if i in self.combo_list[cl]]])[0]
                     winners.append(cl)
-#                     new_res[i] = self.predictors[cl].predict([inp_p_org_np[i, self.combo_list[cl]]])[0]
                     break
                 if k == len(numbers) - 1:
-        #                     new_res[i] = self.classDic[numbers[k]]
                     cl = reg.classDic[numbers[k]]
                     winners.append(cl)
-#                     new_res[i] = self.predictors[0].predict([[c for i, c in enumerate(self.get_test_dat_org_wo_head()[i]) if i in self.combo_list[0]]])[0]
                     new_res[i] = self.predictors[cl].predict([[c for i, c in enumerate(inp_p_org[i]) if i in self.combo_list[cl]]])[0]
-#                     new_res[i] = self.predictors[cl].predict([inp_p_org_np[i, self.combo_list[cl]]])[0]
 
-#         print("final winners", winners)
         count_dict = Counter(winners)
         for f in sorted([(v, k) for k, v in count_dict.items()], reverse=True):
             print(f"{reg.combo_list[f[1]]} occurs {f[0]} times.")
@@ -1123,13 +1076,9 @@ class Deterministic_Regressor:
         whole_rows_org = copy.deepcopy(whole_rows)
         headers_org = whole_rows_org[0]
         data_org = whole_rows_org[1:]
-#         print("headers_org", headers_org)
-#         print("data_org", data_org)
         random.shuffle(data_org)  # Shuffle rows in-place
         
         self.whole_rows_org = [headers_org] + data_org
-#         print("self.whole_rows_org[0]", self.whole_rows_org[0])
-#         print("self.whole_rows_org[1]", self.whole_rows_org[1])
         self.whole_rows = self.clean_and_discretize(self.whole_rows_org, by_two)
         
         headers = self.whole_rows[0]
@@ -1144,20 +1093,16 @@ class Deterministic_Regressor:
         if add_quads:
             target_cols = [i for i in range(len(data_org[0])-1) if Deterministic_Regressor.IsNonBinaryNumeric([row[i] for row in data_org])]
             X = copy.deepcopy(self.test_rows_org)
-#             for j, xxx in enumerate(X[0]):
             for j in range(len(X[0])-1):
                 if j not in target_cols:
                     continue
                 for i, xx in enumerate(X):
-#                     self.test_rows_org[i].append(X[i][j]**2)
                     self.test_rows_org[i].insert(-1, X[i][j]**2)
             X = copy.deepcopy(self.train_rows_org)
-#             for j, xxx in enumerate(X[0]):
             for j in range(len(X[0])-1):
                 if j not in target_cols:
                     continue
                 for i, xx in enumerate(X):
-#                     self.train_rows_org[i].append(X[i][j]**2)
                     self.train_rows_org[i].insert(-1, X[i][j]**2)
 
         return self.continuous_regress(self.get_train_dat_org_wo_head(), self.get_train_res_org_wo_head(), max_reg=max_reg, thresh=thresh, max_vars=max_vars, omit_similar=omit_similar, 
@@ -1258,13 +1203,9 @@ class Deterministic_Regressor:
 
         col_to_ignore = Deterministic_Regressor.give_highly_correlated_columns(X, target_cols)
 
-    #     preds_all = []
-    #     error_all = []
-    #     dic_preds_all = {}
         dic_errors_all = {}
         dic_sme = {}
         dic_ind = {}
-    #     dic_ind_r = {}
         predictors = {}
         # Generate all combinations of two numbers from the list
 
@@ -1282,13 +1223,11 @@ class Deterministic_Regressor:
         model = None
         all_best_sme = float("inf")
         for i in range(numloop):
-#         for i in range(3):
             combinations_of_two = list(combinations(numbers, i+1))
 
             # Print the combinations
             for combo in combinations_of_two:
                 dic_ind[ind_all] = combo
-    #             dic_ind_r[combo] = ind_all
                 ind_all += 1
 
                 if any([c in col_to_ignore for c in combo]):
@@ -1297,14 +1236,10 @@ class Deterministic_Regressor:
                     continue
                     
                 if sample_limit == 0:
-                    # Create a linear regression model
-#                         model = LinearRegression()
                     if is_logistic:
-#                         print("This is LOGISTIC")
                         model = LogisticRegression()
                     else:
-#                         print("This is Linear")
-                        model = LinearRegression()
+                        model = LinearRegression() if len(combo) < 5 else ElasticNet()
 
                     # Train the model using the training sets
                     model.fit(X[:, combo], y_train)
@@ -1320,10 +1255,8 @@ class Deterministic_Regressor:
 #                         tmp_model = LinearRegression()
                         if is_logistic:
                             tmp_model = LogisticRegression()
-#                             print("This is LOGISTIC")
                         else:
-                            tmp_model = LinearRegression()
-#                             print("This is Linear")
+                            tmp_model = LinearRegression() if len(combo) < 5 else ElasticNet()
 
                         # Train the model using the training sets
                         tmp_model.fit(X[:, combo], y_train)
@@ -1338,17 +1271,9 @@ class Deterministic_Regressor:
                             best_sme = tmp_sme
                             model = tmp_model
 
-#                     print("best_sme", best_sme)
-#                     if all_best_sme > best_sme:
-#                         all_best_sme = best_sme
                     the_sme = best_sme
                     
                 dic_sme[combo] = the_sme
-#                 y_pred = model.predict([[xx for i, xx in enumerate(x) if i in combo] for x in X_test])
-                
-    #             dic_preds_all[combo] = y_pred
-    #             preds_all.append(y_pred)
-    #             error_all.append(np.abs(y_pred - y_test))
                 dic_errors_all[combo] = np.abs(y_pred - y_test)
                 predictors[combo] = model
         
@@ -1364,8 +1289,6 @@ class Deterministic_Regressor:
                 break
             if i == max_reg:
                 break
-        #     print("candidate", f[1])
-#             if omit_similar and any([sum([1 if k in a else 0 for k in f[1]]) > 1 for a in already_set]):
             if omit_similar and not include_all and any([sum([1 if k in a else 0 for k in f[1]]) > len(f[1]) - 2 for a in already_set]):
                     continue
             already_set.add(f[1])
@@ -1383,13 +1306,9 @@ class Deterministic_Regressor:
             lowest = float("inf")
             lowest_ind = float("inf")
             for j, a in enumerate(already_list):
-#                 print("a", a)
-#                 print("dic_errors_all[a][i]", dic_errors_all[a][i])
-#                 print("lowest", lowest)
                 if dic_errors_all[a][i] < lowest:
                     lowest_ind = j
                     lowest = dic_errors_all[a][i]
-#             print("winner", already_list[lowest_ind])
             winners[i] = lowest_ind
 
         return winners
