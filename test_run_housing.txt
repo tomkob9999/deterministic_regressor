@@ -1,0 +1,62 @@
+####### Housing Data ######
+
+from sklearn.datasets import fetch_california_housing
+from collections import Counter
+     
+start_time = time.time()
+
+
+#### HOUSING ######
+housing_data = fetch_california_housing()
+target_list = list(housing_data.target)
+housing_list = list(housing_data.data)
+housing_list = [list(housing_list[i]) + [target_list[i]] for i in range(len(housing_list))]
+housing_list = [list(housing_data.feature_names) + ["res"]] + housing_list
+#### HOUSING ######
+
+
+print("fetch_california_housing() finished", measure(start_time))
+start_time = time.time()
+
+reg = Deterministic_Regressor()
+
+print("Deterministic_Regressor() finished", measure(start_time))
+start_time = time.time()
+
+# winners = reg.prepropcess_continous(housing_list, by_two=2, splitter=3, max_reg=5, thresh=0.25, add_quads=True, omit_similar=True, max_vars=3, include_all=False)
+winners = reg.prepropcess_continous(housing_list, by_two=2, splitter=3, max_reg=5, thresh=0.25, add_quads=True, omit_similar=False, max_vars=3, include_all=False)
+print("prepropcess_continous() finished", measure(start_time))
+start_time = time.time()
+
+count_dict = Counter(winners)
+for f in sorted([(v, k) for k, v in count_dict.items()], reverse=True):
+    print(f"{reg.combo_list[f[1]]} occurs {f[0]} times.")
+
+    
+# print("winners", winners)
+# print("reg.get_train_dat_with_head()[0]", reg.get_train_dat_with_head()[0])
+# print("reg.get_train_dat_with_head()[1]", reg.get_train_dat_with_head()[1])
+print("len(housing_list)", len(housing_list))
+print("len(reg.get_train_dat_wo_head())", len(reg.get_train_dat_wo_head()))
+print("len(reg.get_test_dat_wo_head())", len(reg.get_test_dat_wo_head()))
+
+reg.train_and_optimize_class(data_list=reg.get_train_dat_with_head(), expected_answers=winners, error_tolerance=0.05, max_dnf_len=2, min_match=0.001, 
+                             use_compact_opt=True, useUnion=False) #  91.58%
+
+res = reg.solve_with_opt_continuous(reg.get_test_dat_with_head(), reg.get_test_dat_org_wo_head())
+print("solve_with_opt_continuous() finished", measure(start_time))
+start_time = time.time()
+
+Deterministic_Regressor.show_mse(res, reg.get_test_res_org_wo_head())
+
+# print("reg.get_test_res_org_wo_head()", reg.get_test_res_org_wo_head())
+# print("res", res)
+
+res = reg.solve_with_highest(reg.get_test_dat_org_wo_head())
+print("solve_with_highest() finished", measure(start_time))
+start_time = time.time()
+
+Deterministic_Regressor.show_mse(res, reg.get_test_res_org_wo_head())
+
+# print("reg.get_test_res_org_wo_head()", reg.get_test_res_org_wo_head())
+# print("res", res)
