@@ -1,6 +1,6 @@
 ### Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 3.1.9
+# Version: 3.2.0
 # Date: 2024/02/15
 
 import itertools
@@ -18,6 +18,7 @@ import time
 from itertools import combinations
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.linear_model import LogisticRegression
     
 class Deterministic_Regressor:
 # This version has no good matches
@@ -1240,7 +1241,13 @@ class Deterministic_Regressor:
         if X_test is None:
             X_test = X_train
             y_test = y_train
+            
+#         print("y_train", y_train)
+        is_logistic = all([y == 0 or y == 1 for y in y_train])
 
+        if is_logistic:
+            print("Logistic regression is used")
+                    
         target_cols = [i for i, xx in enumerate(X_train[0]) if Deterministic_Regressor.IsNonBinaryNumeric([row[i] for row in X_train])]
         print("target_cols", target_cols)
         self.target_cols = target_cols
@@ -1291,7 +1298,13 @@ class Deterministic_Regressor:
                     
                 if sample_limit == 0:
                     # Create a linear regression model
-                    model = LinearRegression()
+#                         model = LinearRegression()
+                    if is_logistic:
+#                         print("This is LOGISTIC")
+                        model = LogisticRegression()
+                    else:
+#                         print("This is Linear")
+                        model = LinearRegression()
 
                     # Train the model using the training sets
                     model.fit(X[:, combo], y_train)
@@ -1304,7 +1317,13 @@ class Deterministic_Regressor:
                     best_sme = float("inf")
                     for i in range(num_fit):
                         # Create a linear regression model
-                        tmp_model = LinearRegression()
+#                         tmp_model = LinearRegression()
+                        if is_logistic:
+                            tmp_model = LogisticRegression()
+#                             print("This is LOGISTIC")
+                        else:
+                            tmp_model = LinearRegression()
+#                             print("This is Linear")
 
                         # Train the model using the training sets
                         tmp_model.fit(X[:, combo], y_train)
