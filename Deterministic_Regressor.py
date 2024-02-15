@@ -1,6 +1,6 @@
 ### Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 3.1.8
+# Version: 3.1.9
 # Date: 2024/02/15
 
 import itertools
@@ -845,9 +845,9 @@ class Deterministic_Regressor:
         
         all_clauses = sorted([(v, k) for k, v in self.all_confidence.items()], reverse=True)
         
-        print(len(true_clauses), "true clauses")
-        print(len(false_clauses), "false clauses")
-        print(len(all_clauses), "all clauses")
+#         print(len(true_clauses), "true clauses")
+#         print(len(false_clauses), "false clauses")
+#         print(len(all_clauses), "all clauses")
         
         final_expr = ""
         best_ee = -1
@@ -1374,3 +1374,11 @@ class Deterministic_Regressor:
             winners[i] = lowest_ind
 
         return winners
+    
+    def show_regression_info(self):
+        for i, p in enumerate(self.predictors):
+            print("")
+            print("Regression Variables:", self.combo_list[i])
+            print("Coefficients:", p.coef_)
+            print("Intercept:", p.intercept_)
+            print("----------")
