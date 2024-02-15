@@ -1,6 +1,6 @@
 ### Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 3.1.6
+# Version: 3.1.8
 # Date: 2024/02/15
 
 import itertools
@@ -843,8 +843,11 @@ class Deterministic_Regressor:
         false_clauses = sorted([(v, k) for k, v in self.false_confidence.items()], reverse=True)
         true_clauses = sorted([(v, k) for k, v in self.true_confidence.items()], reverse=True)
         
-        
         all_clauses = sorted([(v, k) for k, v in self.all_confidence.items()], reverse=True)
+        
+        print(len(true_clauses), "true clauses")
+        print(len(false_clauses), "false clauses")
+        print(len(all_clauses), "all clauses")
         
         final_expr = ""
         best_ee = -1
@@ -854,7 +857,8 @@ class Deterministic_Regressor:
         if len(all_clauses) > 0:
             
             cnt = 0
-            for i in range(1, len(all_clauses), 1):
+            for i in range(len(all_clauses)):
+#             for i in range(1, len(all_clauses), 1):
                 cnt = cnt + 1
                 if cnt_out < cnt:
                     break
@@ -889,6 +893,13 @@ class Deterministic_Regressor:
                 f1 = f1_score(answer, res)
                 ee = (f1 + min(precision,recall))/2
                 ee = 0 if ee < 0 else ee
+                
+                if i == 0:
+                    final_expr = expr
+                
+                    true_exps = temp_true_exps
+                    false_exps = temp_false_exps
+                    
                 if best_ee < ee:
                     best_ee = ee
 
@@ -902,7 +913,7 @@ class Deterministic_Regressor:
 
         if final_expr != "":
             
-            print("assessment of the optimal solution")
+            print("Assessment of the optimal solution")
             res = self.solve_direct(inp, final_expr)
 
             if len(res) > 0:
@@ -1107,7 +1118,7 @@ class Deterministic_Regressor:
         self.test_rows = data[:split_index]
         self.train_rows = data[split_index:]
     
-    def prepropcess_continous(self, whole_rows, by_two, splitter=3, max_reg=8, thresh=0.3, add_quads=False, max_vars=3, omit_similar=False, include_all=True):
+    def prepropcess_continous(self, whole_rows, by_two, splitter=3, max_reg=8, thresh=0.3, add_quads=False, max_vars=3, omit_similar=False, include_all=True, sample_limit=0, num_fit=5):
         whole_rows_org = copy.deepcopy(whole_rows)
         headers_org = whole_rows_org[0]
         data_org = whole_rows_org[1:]
@@ -1131,7 +1142,6 @@ class Deterministic_Regressor:
         self.train_rows_org = data_org[split_index:]
         if add_quads:
             target_cols = [i for i in range(len(data_org[0])-1) if Deterministic_Regressor.IsNonBinaryNumeric([row[i] for row in data_org])]
-            print("target_cols", target_cols)
             X = copy.deepcopy(self.test_rows_org)
 #             for j, xxx in enumerate(X[0]):
             for j in range(len(X[0])-1):
@@ -1149,7 +1159,8 @@ class Deterministic_Regressor:
 #                     self.train_rows_org[i].append(X[i][j]**2)
                     self.train_rows_org[i].insert(-1, X[i][j]**2)
 
-        return self.continuous_regress(self.get_train_dat_org_wo_head(), self.get_train_res_org_wo_head(), max_reg=max_reg, thresh=thresh, max_vars=max_vars, omit_similar=omit_similar, include_all=include_all)
+        return self.continuous_regress(self.get_train_dat_org_wo_head(), self.get_train_res_org_wo_head(), max_reg=max_reg, thresh=thresh, max_vars=max_vars, omit_similar=omit_similar, 
+                                       include_all=include_all, sample_limit=sample_limit, num_fit=num_fit)
     
     def get_train_dat_wo_head(self):
         return [row[:-1] for row in self.train_rows]
@@ -1176,22 +1187,22 @@ class Deterministic_Regressor:
         return [row[:-1] for row in self.train_rows_org]
     def get_train_res_org_wo_head(self):
         return [row[-1] for row in self.train_rows_org]
-    def get_train_dat_org_with_head(self):
-        return [self.whole_rows_org[0][:-1]] + [row[:-1] for row in self.train_rows_org]
+#     def get_train_dat_org_with_head(self):
+#         return [self.whole_rows_org[0][:-1]] + [row[:-1] for row in self.train_rows_org]
     def get_train_datres_org_wo_head(self):
         return self.train_rows_org
-    def get_train_datres_org_with_head(self):
-        return [self.whole_rows_org[0]] + self.train_rows_org
+#     def get_train_datres_org_with_head(self):
+#         return [self.whole_rows_org[0]] + self.train_rows_org
     def get_test_dat_org_wo_head(self):
         return [row[:-1] for row in self.test_rows_org]
     def get_test_res_org_wo_head(self):
         return [row[-1] for row in self.test_rows_org]
-    def get_test_dat_org_with_head(self):
-        return [self.whole_rows_org[0][:-1]] + [row[:-1] for row in self.test_rows_org]
+#     def get_test_dat_org_with_head(self):
+#         return [self.whole_rows_org[0][:-1]] + [row[:-1] for row in self.test_rows_org]
     def get_test_datres_org_wo_head(self):
         return self.test_rows_org[1:]
-    def get_test_datres_org_with_head(self):
-        return [self.whole_rows_org[0]] + self.test_rows_org
+#     def get_test_datres_org_with_head(self):
+#         return [self.whole_rows_org[0]] + self.test_rows_org
     
     def show_stats(predicted, actual, average="weighted", elements_count_penalty=1.0):
         
@@ -1219,7 +1230,7 @@ class Deterministic_Regressor:
         #         # The mean squared error
         print('Mean squared error: %.2f' % mean_squared_error(y_test, y_pred))
         
-    def continuous_regress(self, X_train, y_train, X_test=None, y_test=None, max_reg=8, thresh=0.3, max_vars=3, omit_similar=False, include_all=False):
+    def continuous_regress(self, X_train, y_train, X_test=None, y_test=None, max_reg=8, thresh=0.3, max_vars=3, omit_similar=False, include_all=False, sample_limit=0, num_fit=5):
 
     #     if test_size == 0.0:
     #         X_train, X_test, y_train, y_test = X, X, y, y
@@ -1231,6 +1242,7 @@ class Deterministic_Regressor:
             y_test = y_train
 
         target_cols = [i for i, xx in enumerate(X_train[0]) if Deterministic_Regressor.IsNonBinaryNumeric([row[i] for row in X_train])]
+        print("target_cols", target_cols)
         self.target_cols = target_cols
         X = np.array([np.array(x) for x in X_train])
         X_test = np.array([np.array(x) for x in X_test])
@@ -1260,6 +1272,8 @@ class Deterministic_Regressor:
                 
         ind_all = 0
         numloop = max_vars if len(target_cols) > max_vars else len(target_cols)
+        model = None
+        all_best_sme = float("inf")
         for i in range(numloop):
 #         for i in range(3):
             combinations_of_two = list(combinations(numbers, i+1))
@@ -1274,15 +1288,43 @@ class Deterministic_Regressor:
                     continue
                 if not all([c in target_cols for c in combo]):
                     continue
+                    
+                if sample_limit == 0:
+                    # Create a linear regression model
+                    model = LinearRegression()
 
-                # Create a linear regression model
-                model = LinearRegression()
+                    # Train the model using the training sets
+                    model.fit(X[:, combo], y_train)
+                    # The coefficients
+                    # The mean squared error
+                    # Make predictions using the testing set
+                    y_pred = model.predict(X_test[:, combo])
+                    the_sme = mean_squared_error(y_test, y_pred)
+                else:
+                    best_sme = float("inf")
+                    for i in range(num_fit):
+                        # Create a linear regression model
+                        tmp_model = LinearRegression()
 
-                # Train the model using the training sets
-                model.fit(X[:, combo], y_train)
+                        # Train the model using the training sets
+                        tmp_model.fit(X[:, combo], y_train)
 
-                # Make predictions using the testing set
-                y_pred = model.predict(X_test[:, combo])
+                        sampled = random.sample(list(range(len(X))), sample_limit if len(X) > sample_limit else len(X))
+                        tmp_model.fit(X[:, combo][sampled,:], np.array(y_train)[sampled])
+
+                        # Make predictions using the testing set
+                        y_pred = tmp_model.predict(X_test[:, combo])
+                        tmp_sme = mean_squared_error(y_test, y_pred)
+                        if best_sme > tmp_sme:
+                            best_sme = tmp_sme
+                            model = tmp_model
+
+#                     print("best_sme", best_sme)
+#                     if all_best_sme > best_sme:
+#                         all_best_sme = best_sme
+                    the_sme = best_sme
+                    
+                dic_sme[combo] = the_sme
 #                 y_pred = model.predict([[xx for i, xx in enumerate(x) if i in combo] for x in X_test])
                 
     #             dic_preds_all[combo] = y_pred
@@ -1290,9 +1332,6 @@ class Deterministic_Regressor:
     #             error_all.append(np.abs(y_pred - y_test))
                 dic_errors_all[combo] = np.abs(y_pred - y_test)
                 predictors[combo] = model
-                # The coefficients
-                # The mean squared error
-                dic_sme[combo] = mean_squared_error(y_test, y_pred)
         
         i = 0
         already_set = set()
