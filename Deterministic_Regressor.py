@@ -1,7 +1,7 @@
 ### Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 3.2.1
-# Date: 2024/02/15
+# Version: 3.2.2
+# Date: 2024/02/16
 
 import itertools
 from sympy.logic import boolalg
@@ -20,6 +20,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.linear_model import LogisticRegression
 from sklearn.linear_model import ElasticNet
+from sklearn.metrics import accuracy_score, classification_report
     
 class Deterministic_Regressor:
 # This version has no good matches
@@ -1035,7 +1036,7 @@ class Deterministic_Regressor:
     def solve_with_highest(self, inp_p_org):
         
         new_res = [0] * len(inp_p_org)
-        
+        print(self.combo_list[0], "is used")
         for i in range(len(inp_p_org)):
             
             new_res[i] = self.predictors[0].predict([[c for i, c in enumerate(inp_p_org[i]) if i in self.combo_list[0]]])[0]
@@ -1072,7 +1073,7 @@ class Deterministic_Regressor:
         self.test_rows = data[:split_index]
         self.train_rows = data[split_index:]
     
-    def prepropcess_continous(self, whole_rows, by_two, splitter=3, max_reg=8, thresh=0.3, add_quads=False, max_vars=3, omit_similar=False, include_all=True, sample_limit=0, num_fit=5):
+    def prepropcess_continous(self, whole_rows, by_two, splitter=3, max_reg=8, thresh=0.3, add_quads=False, max_vars=3, omit_similar=False, include_all=True, sample_limit=0, num_fit=5, use_multinomial=False):
         whole_rows_org = copy.deepcopy(whole_rows)
         headers_org = whole_rows_org[0]
         data_org = whole_rows_org[1:]
@@ -1106,7 +1107,7 @@ class Deterministic_Regressor:
                     self.train_rows_org[i].insert(-1, X[i][j]**2)
 
         return self.continuous_regress(self.get_train_dat_org_wo_head(), self.get_train_res_org_wo_head(), max_reg=max_reg, thresh=thresh, max_vars=max_vars, omit_similar=omit_similar, 
-                                       include_all=include_all, sample_limit=sample_limit, num_fit=num_fit)
+                                       include_all=include_all, sample_limit=sample_limit, num_fit=num_fit, use_multinomial=use_multinomial)
     
     def get_train_dat_wo_head(self):
         return [row[:-1] for row in self.train_rows]
@@ -1176,7 +1177,7 @@ class Deterministic_Regressor:
         #         # The mean squared error
         print('Mean squared error: %.2f' % mean_squared_error(y_test, y_pred))
         
-    def continuous_regress(self, X_train, y_train, X_test=None, y_test=None, max_reg=8, thresh=0.3, max_vars=3, omit_similar=False, include_all=False, sample_limit=0, num_fit=5):
+    def continuous_regress(self, X_train, y_train, X_test=None, y_test=None, max_reg=8, thresh=0.3, max_vars=3, omit_similar=False, include_all=True, sample_limit=0, num_fit=5, use_multinomial=False):
 
     #     if test_size == 0.0:
     #         X_train, X_test, y_train, y_test = X, X, y, y
@@ -1209,19 +1210,30 @@ class Deterministic_Regressor:
         predictors = {}
         # Generate all combinations of two numbers from the list
 
+        all_best_sme = float("inf")
+        
+        print("Now regressing: ", sep=' ', end='')
         if include_all:
             combo = tuple(target_cols)
-            model = LinearRegression()
+            print(combo, sep=' ', end='')
+            print(" ", end='')
+#             model = LinearRegression()
+            if use_multinomial:
+                model = LogisticRegression(multi_class='multinomial', solver='lbfgs', max_iter=1000)
+            elif is_logistic:
+                model = LogisticRegression(solver='lbfgs', max_iter=1000)
+            else:
+                model = LinearRegression() if len(combo) < 10 else ElasticNet()
             model.fit(X[:, combo], y_train)
             y_pred = model.predict(X_test[:, combo])
             dic_errors_all[combo] = np.abs(y_pred - y_test)
             predictors[combo] = model
-            dic_sme[combo] = mean_squared_error(y_test, y_pred)
+            all_best_sme = mean_squared_error(y_test, y_pred) if not use_multinomial else 1 - accuracy_score(y_test, y_pred)
+            dic_sme[combo] = all_best_sme
                 
         ind_all = 0
         numloop = max_vars if len(target_cols) > max_vars else len(target_cols)
         model = None
-        all_best_sme = float("inf")
         for i in range(numloop):
             combinations_of_two = list(combinations(numbers, i+1))
 
@@ -1235,11 +1247,15 @@ class Deterministic_Regressor:
                 if not all([c in target_cols for c in combo]):
                     continue
                     
+                print(combo, sep=' ', end='')
+                print(" ", end='')
                 if sample_limit == 0:
-                    if is_logistic:
-                        model = LogisticRegression()
+                    if use_multinomial:
+                        model = LogisticRegression(multi_class='multinomial', solver='lbfgs', max_iter=1000)
+                    elif is_logistic:
+                        model = LogisticRegression(solver='lbfgs', max_iter=1000)
                     else:
-                        model = LinearRegression() if len(combo) < 5 else ElasticNet()
+                        model = LinearRegression() if len(combo) < 10 else ElasticNet()
 
                     # Train the model using the training sets
                     model.fit(X[:, combo], y_train)
@@ -1247,14 +1263,16 @@ class Deterministic_Regressor:
                     # The mean squared error
                     # Make predictions using the testing set
                     y_pred = model.predict(X_test[:, combo])
-                    the_sme = mean_squared_error(y_test, y_pred)
+                    the_sme = mean_squared_error(y_test, y_pred) if not use_multinomial else 1 - accuracy_score(y_test, y_pred)
                 else:
                     best_sme = float("inf")
                     for i in range(num_fit):
                         # Create a linear regression model
 #                         tmp_model = LinearRegression()
-                        if is_logistic:
-                            tmp_model = LogisticRegression()
+                        if use_multinomial:
+                            tmp_model = LogisticRegression(multi_class='multinomial', solver='lbfgs', max_iter=1000)
+                        elif is_logistic:
+                            tmp_model = LogisticRegression(solver='lbfgs', max_iter=1000)
                         else:
                             tmp_model = LinearRegression() if len(combo) < 5 else ElasticNet()
 
@@ -1266,7 +1284,7 @@ class Deterministic_Regressor:
 
                         # Make predictions using the testing set
                         y_pred = tmp_model.predict(X_test[:, combo])
-                        tmp_sme = mean_squared_error(y_test, y_pred)
+                        tmp_sme = mean_squared_error(y_test, y_pred) if not use_multinomial else 1 - accuracy_score(y_test, y_pred)
                         if best_sme > tmp_sme:
                             best_sme = tmp_sme
                             model = tmp_model
@@ -1277,6 +1295,7 @@ class Deterministic_Regressor:
                 dic_errors_all[combo] = np.abs(y_pred - y_test)
                 predictors[combo] = model
         
+        print("")
         i = 0
         already_set = set()
         already_list = list()
