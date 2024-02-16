@@ -1,7 +1,7 @@
 ### Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 3.2.2
-# Date: 2024/02/16
+# Version: 3.2.4
+# Date: 2024/02/17
 
 import itertools
 from sympy.logic import boolalg
@@ -21,6 +21,7 @@ from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.linear_model import LogisticRegression
 from sklearn.linear_model import ElasticNet
 from sklearn.metrics import accuracy_score, classification_report
+from sklearn.mixture import GaussianMixture
     
 class Deterministic_Regressor:
 # This version has no good matches
@@ -59,6 +60,7 @@ class Deterministic_Regressor:
         self.combo_list = []
         self.predictors = []
         self.target_cols = []
+        self.gmm = None
 
 
     def IsNonBinaryNumeric(n):
@@ -67,6 +69,35 @@ class Deterministic_Regressor:
         except Exception as e:
             return False
 
+    def findClusters(X_in):
+
+        X = np.array([np.array(x) for x in X_in])
+        target_cols = [i for i, xx in enumerate(X[0]) if Deterministic_Regressor.IsNonBinaryNumeric([row[i] for row in X])]
+
+        max_clusters = 10
+
+        n_components = np.arange(1, max_clusters)
+        models = [GaussianMixture(n, covariance_type='full').fit(X) for n in n_components]
+        aic = [model.aic(X) for model in models]
+        bic = [model.bic(X) for model in models]
+
+        num_clusters = 1
+        for j in range(len(models)-1):
+            if j == 0 and (aic[0] < aic[1] or bic[0] < bic[1]):
+                break
+            if j > 0 and (aic[j] < aic[j+1] or bic[j] < bic[j+1]):
+                num_clusters = j+1
+                break
+
+        X_clust = []
+        y_clust = []
+        if num_clusters > 1:
+            gmm = GaussianMixture(n_components=num_clusters)
+            gmm.fit(X)
+            cluster_labels = gmm.predict(X)
+            return cluster_labels, gmm
+        else:
+            return None, None
 
     def calculate_correlation_matrix(data):
         """Calculate the correlation matrix for the given data."""
@@ -1064,8 +1095,31 @@ class Deterministic_Regressor:
                                      elements_count_penalty=elements_count_penalty, use_compact_opt=use_compact_opt, cnt_out=cnt_out, useUnion=useUnion, 
                                      useExpanded=useExpanded, use_stochastic=use_stochastic, stochastic_min_rating=stochastic_min_rating)
     
-    def prepropcess(self, whole_rows, by_two, splitter=3):
-        self.whole_rows = self.clean_and_discretize(whole_rows, by_two)
+    def prepropcess(self, whole_rows, by_two, splitter=3, add_cluster_label=False):
+        
+        whole_rows_copy = copy.deepcopy(whole_rows)
+        if add_cluster_label:
+            print("Adding cluster label")
+            head = whole_rows_copy[0:1]
+            data = whole_rows_copy[1:]
+            data = data.tolist() if isinstance(data, np.ndarray) else copy.deepcopy(data)
+            clusters, self.gmm = Deterministic_Regressor.findClusters(data)
+            if clusters is None or len(clusters) == 0:
+                print("No cluster found")
+            else:
+#                 count_dict = Counter(clusters)
+#                 for f in sorted([(v, k) for k, v in count_dict.items()], reverse=True):
+#                     print(f"Cluster {f[1]} occurs {f[0]} times.")
+    
+#                 print(len(clusters), "clusters found")
+                for i, row in enumerate(data):
+                    row.insert(-1, clusters[i])
+                head[0].insert(-1, "clustered_label")
+                whole_rows_copy = head + data 
+    #             print("data[:3]", data[:3])
+            
+#         self.whole_rows = self.clean_and_discretize(whole_rows, by_two)
+        self.whole_rows = self.clean_and_discretize(whole_rows_copy, by_two)
         headers = self.whole_rows
         data = self.whole_rows[1:]
         random.shuffle(data)  # Shuffle rows in-place
@@ -1073,14 +1127,36 @@ class Deterministic_Regressor:
         self.test_rows = data[:split_index]
         self.train_rows = data[split_index:]
     
-    def prepropcess_continous(self, whole_rows, by_two, splitter=3, max_reg=8, thresh=0.3, add_quads=False, max_vars=3, omit_similar=False, include_all=True, sample_limit=0, num_fit=5, use_multinomial=False):
+    def prepropcess_continous(self, whole_rows, by_two, splitter=3, max_reg=8, thresh=0.3, add_quads=False, max_vars=3, omit_similar=False, include_all=True, sample_limit=0, num_fit=5, 
+                              use_multinomial=False, add_cluster_label=False):
         whole_rows_org = copy.deepcopy(whole_rows)
         headers_org = whole_rows_org[0]
         data_org = whole_rows_org[1:]
+        
+        if add_cluster_label:
+            print("Adding cluster label")
+            data_org = data_org.tolist() if isinstance(data_org, np.ndarray) else copy.deepcopy(data_org)
+            clusters, self.gmm = Deterministic_Regressor.findClusters(data_org)
+            if clusters is None or len(clusters) == 0:
+                print("No cluster found")
+            else:
+                count_dict = Counter(clusters)
+#                 for f in sorted([(v, k) for k, v in count_dict.items()], reverse=True):
+#                     print(f"Cluster {f[1]} occurs {f[0]} times.")
+                for i, row in enumerate(data_org):
+                    row.insert(-1, clusters[i])
+                headers_org.insert(-1, "clustered_label")
+#                 print("headers_org", headers_org)
+#                 print("data_org[:3]", data_org[:3])
+        
         random.shuffle(data_org)  # Shuffle rows in-place
+#         print("headers_org", headers_org)
+#         print("data_org[:3]", data_org[:3])
         
         self.whole_rows_org = [headers_org] + data_org
+#         print("self.whole_rows_org[:3]", self.whole_rows_org[:3])
         self.whole_rows = self.clean_and_discretize(self.whole_rows_org, by_two)
+#         print("self.whole_rows[:3]", self.whole_rows[:3])
         
         headers = self.whole_rows[0]
         data = self.whole_rows[1:]
@@ -1223,7 +1299,8 @@ class Deterministic_Regressor:
             elif is_logistic:
                 model = LogisticRegression(solver='lbfgs', max_iter=1000)
             else:
-                model = LinearRegression() if len(combo) < 10 else ElasticNet()
+#                 model = LinearRegression() if len(combo) < 10 else ElasticNet()
+                model = LinearRegression()
             model.fit(X[:, combo], y_train)
             y_pred = model.predict(X_test[:, combo])
             dic_errors_all[combo] = np.abs(y_pred - y_test)
@@ -1255,7 +1332,8 @@ class Deterministic_Regressor:
                     elif is_logistic:
                         model = LogisticRegression(solver='lbfgs', max_iter=1000)
                     else:
-                        model = LinearRegression() if len(combo) < 10 else ElasticNet()
+#                         model = LinearRegression() if len(combo) < 10 else ElasticNet()
+                        model = LinearRegression()
 
                     # Train the model using the training sets
                     model.fit(X[:, combo], y_train)
@@ -1274,7 +1352,8 @@ class Deterministic_Regressor:
                         elif is_logistic:
                             tmp_model = LogisticRegression(solver='lbfgs', max_iter=1000)
                         else:
-                            tmp_model = LinearRegression() if len(combo) < 5 else ElasticNet()
+#                             tmp_model = LinearRegression() if len(combo) < 5 else ElasticNet()
+                            tmp_model = LinearRegression()
 
                         # Train the model using the training sets
                         tmp_model.fit(X[:, combo], y_train)
