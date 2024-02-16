@@ -1,0 +1,52 @@
+###### Breast Cancer Data Test 4 ######
+
+from sklearn.datasets import load_breast_cancer
+     
+start_time = time.time()
+
+###### Load the breast cancer dataset ###### 
+data = load_breast_cancer()
+X, y = data.data, data.target
+# X, X_test, y, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+X_list = [list(a) for a in X]
+y_list = list(y)
+heads = [f.replace(" ", "_") for f in data.feature_names]
+X_list.insert(0, heads)
+y_list.insert(0, "Result")
+sick_list3 = [X_list[i] + [y_list[i]] for i in range(len(X_list))]
+###### Load the breast cancer dataset ###### 
+
+print("load_breast_cancer() finished", measure(start_time))
+start_time = time.time()
+
+reg = Deterministic_Regressor()
+
+print("Deterministic_Regressor() finished", measure(start_time))
+start_time = time.time()
+
+# winners = reg.prepropcess_continous(sick_list3, by_two=2, splitter=3, max_reg=3, thresh=0.25, add_quads=False, omit_similar=True, max_vars=3, include_all=True) # 
+winners = reg.prepropcess_continous(sick_list3, by_two=2, splitter=3, max_reg=5, thresh=5.00, add_quads=False, omit_similar=True, max_vars=3, include_all=True, sample_limit=300, num_fit=3) # 95.75%
+start_time = time.time()
+
+reg.show_regression_info()
+
+print("winners", winners)
+
+# reg.train_and_optimize_class(data_list=reg.get_train_dat_with_head(), expected_answers=winners, error_tolerance=0.05, max_dnf_len=3, min_match=0.03, 
+#                              use_compact_opt=True, useUnion=False, use_stochastic=True) # 
+reg.train_and_optimize_class(data_list=reg.get_train_dat_with_head(), expected_answers=winners, error_tolerance=0.05, max_dnf_len=3, min_match=0.03, 
+                             use_compact_opt=True, useUnion=False, use_stochastic=False) # 
+
+res = reg.solve_with_opt_continuous(reg.get_test_dat_with_head(), reg.get_test_dat_org_wo_head())
+print("solve_with_opt_continuous() finished", measure(start_time))
+start_time = time.time()
+
+print("res", res)
+Deterministic_Regressor.show_stats(res, reg.get_test_res_wo_head())
+
+res = reg.solve_with_highest(reg.get_test_dat_org_wo_head())
+print("solve_with_highest() finished", measure(start_time))
+start_time = time.time()
+
+print("res", res)
+Deterministic_Regressor.show_stats(res, reg.get_test_res_wo_head())
