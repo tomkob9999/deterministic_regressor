@@ -1,7 +1,7 @@
 ### Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 3.2.4
-# Date: 2024/02/17
+# Version: 3.2.6
+# Date: 2024/02/18
 
 import itertools
 from sympy.logic import boolalg
@@ -22,12 +22,15 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.linear_model import ElasticNet
 from sklearn.metrics import accuracy_score, classification_report
 from sklearn.mixture import GaussianMixture
-    
+import warnings
+from sklearn.exceptions import ConvergenceWarning
+
+
 class Deterministic_Regressor:
 # This version has no good matches
 # Instead, all true matches are first added, and some are removed when 
 # false unmatch exists and there is no corresponding other rule
-    def __init__(self):
+    def __init__(self, supress_sklearn_warn=True):
         self.expression_true = ""
         self.expression_false = ""
         self.true_confidence = {}
@@ -62,6 +65,9 @@ class Deterministic_Regressor:
         self.target_cols = []
         self.gmm = None
 
+        if supress_sklearn_warn:
+            warnings.filterwarnings("ignore", category=ConvergenceWarning, module="sklearn")
+            warnings.filterwarnings("ignore", category=UserWarning, module="sklearn")
 
     def IsNonBinaryNumeric(n):
         try:
@@ -106,6 +112,20 @@ class Deterministic_Regressor:
         corr_matrix = np.dot(standardized_data.T, standardized_data) / n
         return corr_matrix
 
+    
+
+    def give_correlated_columns_to_y(data, y, threshold=0.7):
+        """Remove columns with strong correlations."""
+#         print("aaa", [row + [y[i]] for i, row in enumerate(data)])
+        corr_matrix = Deterministic_Regressor.calculate_correlation_matrix(np.array([row + [y[i]] for i, row in enumerate(data)]))
+        related_cols = set()
+
+        ind_y = len(corr_matrix)-1
+        for j in range(corr_matrix.shape[1]-1):
+            if abs(corr_matrix[ind_y, j]) > threshold:
+                related_cols.add(j)
+
+        return sorted(related_cols)
 
     def remove_highly_correlated_columns(data, threshold=0.8):
         """Remove columns with strong correlations."""
@@ -1127,8 +1147,8 @@ class Deterministic_Regressor:
         self.test_rows = data[:split_index]
         self.train_rows = data[split_index:]
     
-    def prepropcess_continous(self, whole_rows, by_two, splitter=3, max_reg=8, thresh=0.3, add_quads=False, max_vars=3, omit_similar=False, include_all=True, sample_limit=0, num_fit=5, 
-                              use_multinomial=False, add_cluster_label=False):
+    def prepropcess_continous(self, whole_rows, by_two, splitter=3, max_reg=8, thresh=0.3, add_quads=False, max_vars=3, omit_similar=False, include_all=True, include_related=True, sample_limit=0, num_fit=5, 
+                              use_multinomial=False, add_cluster_label=False, use_piecewise=True):
         whole_rows_org = copy.deepcopy(whole_rows)
         headers_org = whole_rows_org[0]
         data_org = whole_rows_org[1:]
@@ -1175,15 +1195,29 @@ class Deterministic_Regressor:
                     continue
                 for i, xx in enumerate(X):
                     self.test_rows_org[i].insert(-1, X[i][j]**2)
+# logs do not raise performance and cause occasional error values
+#             for j in range(len(X[0])-1):
+#                 if j not in target_cols:
+#                     continue
+#                 for i, xx in enumerate(X):
+#                     self.test_rows_org[i].insert(-1, np.log(X[i][j]) if not np.isnan(np.log(X[i][j])) else 0)
+                    
+                    
             X = copy.deepcopy(self.train_rows_org)
             for j in range(len(X[0])-1):
                 if j not in target_cols:
                     continue
                 for i, xx in enumerate(X):
                     self.train_rows_org[i].insert(-1, X[i][j]**2)
-
+# logs do not raise performance and cause occasional error values
+#             for j in range(len(X[0])-1):
+#                 if j not in target_cols:
+#                     continue
+#                 for i, xx in enumerate(X):
+#                     self.train_rows_org[i].insert(-1, np.log(X[i][j]) if not np.isnan(np.log(X[i][j])) else 0)
+#         print("self.get_train_dat_org_wo_head()[:20]", self.get_train_dat_org_wo_head()[:20])
         return self.continuous_regress(self.get_train_dat_org_wo_head(), self.get_train_res_org_wo_head(), max_reg=max_reg, thresh=thresh, max_vars=max_vars, omit_similar=omit_similar, 
-                                       include_all=include_all, sample_limit=sample_limit, num_fit=num_fit, use_multinomial=use_multinomial)
+                                       include_all=include_all, include_related=include_related, sample_limit=sample_limit, num_fit=num_fit, use_multinomial=use_multinomial, use_piecewise=use_piecewise)
     
     def get_train_dat_wo_head(self):
         return [row[:-1] for row in self.train_rows]
@@ -1253,7 +1287,8 @@ class Deterministic_Regressor:
         #         # The mean squared error
         print('Mean squared error: %.2f' % mean_squared_error(y_test, y_pred))
         
-    def continuous_regress(self, X_train, y_train, X_test=None, y_test=None, max_reg=8, thresh=0.3, max_vars=3, omit_similar=False, include_all=True, sample_limit=0, num_fit=5, use_multinomial=False):
+    def continuous_regress(self, X_train, y_train, X_test=None, y_test=None, max_reg=8, thresh=0.3, max_vars=3, omit_similar=False, include_all=True, include_related=True, sample_limit=0, num_fit=5, 
+                           use_multinomial=False, use_piecewise=True):
 
     #     if test_size == 0.0:
     #         X_train, X_test, y_train, y_test = X, X, y, y
@@ -1295,25 +1330,30 @@ class Deterministic_Regressor:
             print(" ", end='')
 #             model = LinearRegression()
             if use_multinomial:
-                model = LogisticRegression(multi_class='multinomial', solver='lbfgs', max_iter=1000)
+#                 model = LogisticRegression(multi_class='multinomial', solver='lbfgs', max_iter=1000)
+                model = piecewise_regressor(regression_type="multi") if use_piecewise else LogisticRegression(multi_class='multinomial', solver='lbfgs', max_iter=1000)
             elif is_logistic:
-                model = LogisticRegression(solver='lbfgs', max_iter=1000)
+#                 model = LogisticRegression(solver='lbfgs', max_iter=1000)
+                model = piecewise_regressor(regression_type="logistic") if use_piecewise else LogisticRegression(solver='lbfgs', max_iter=1000)
             else:
 #                 model = LinearRegression() if len(combo) < 10 else ElasticNet()
-                model = LinearRegression()
+#                 model = LinearRegression()
+                model = piecewise_regressor(regression_type="linear") if use_piecewise else LinearRegression()
             model.fit(X[:, combo], y_train)
             y_pred = model.predict(X_test[:, combo])
             dic_errors_all[combo] = np.abs(y_pred - y_test)
             predictors[combo] = model
             all_best_sme = mean_squared_error(y_test, y_pred) if not use_multinomial else 1 - accuracy_score(y_test, y_pred)
             dic_sme[combo] = all_best_sme
-                
+
+        
         ind_all = 0
         numloop = max_vars if len(target_cols) > max_vars else len(target_cols)
         model = None
         for i in range(numloop):
             combinations_of_two = list(combinations(numbers, i+1))
-
+            print("")
+            print("Regressing", (i+1), "variable combos")
             # Print the combinations
             for combo in combinations_of_two:
                 dic_ind[ind_all] = combo
@@ -1323,10 +1363,14 @@ class Deterministic_Regressor:
                     continue
                 if not all([c in target_cols for c in combo]):
                     continue
+                if combo in dic_sme:
+                    continue
                     
-                print(combo, sep=' ', end='')
-                print(" ", end='')
+#                 print(combo, sep=' ', end='')
+#                 print(" ", end='')
+                print(".", end='')
                 if sample_limit == 0:
+    
                     if use_multinomial:
                         model = LogisticRegression(multi_class='multinomial', solver='lbfgs', max_iter=1000)
                     elif is_logistic:
@@ -1346,7 +1390,7 @@ class Deterministic_Regressor:
                     best_sme = float("inf")
                     for i in range(num_fit):
                         # Create a linear regression model
-#                         tmp_model = LinearRegression()
+                        tmp_model = LinearRegression()
                         if use_multinomial:
                             tmp_model = LogisticRegression(multi_class='multinomial', solver='lbfgs', max_iter=1000)
                         elif is_logistic:
@@ -1355,6 +1399,7 @@ class Deterministic_Regressor:
 #                             tmp_model = LinearRegression() if len(combo) < 5 else ElasticNet()
                             tmp_model = LinearRegression()
 
+    
                         # Train the model using the training sets
                         tmp_model.fit(X[:, combo], y_train)
 
@@ -1380,6 +1425,7 @@ class Deterministic_Regressor:
         already_list = list()
         min_sme = -1
         already_tup = ()
+        
         for f in sorted([(v, k) for k, v in dic_sme.items()]):
             if i == 0:
                 min_sme = f[0]
@@ -1394,6 +1440,51 @@ class Deterministic_Regressor:
             already_list.append(f[1])
             i += 1
 
+
+#         print("already_list", already_list)
+        if include_related:
+            numtop = 6
+            related_cols = []
+#             for a in already_list:
+            for f in sorted([(v, k) for k, v in dic_sme.items()]):
+                if len(f[1]) > 3:
+                    continue
+                for aa in f[1]:
+#                     print("aa", aa)
+                    if aa not in related_cols:
+                        related_cols.append(aa)
+                    if len(related_cols) >= numtop:
+                        break
+                
+                if len(related_cols) >= numtop:
+                    break
+#             print("related_cols", related_cols)
+            if len(related_cols) > 1:
+                related_cols = tuple(sorted(related_cols))
+                if related_cols not in already_list:
+#                     related_cols = Deterministic_Regressor.give_correlated_columns_to_y(X_train, y_train, threshold=0.5)
+#                     if len(related_cols) > 0 and tuple(target_cols) != tuple(related_cols):
+#                     combo = tuple(related_cols)
+                    combo = related_cols
+#                     print(combo, sep=' ', end='')
+#                     print(" ", end='')
+                    if use_multinomial:
+#                         model = LogisticRegression(multi_class='multinomial', solver='lbfgs', max_iter=1000)
+                        model = piecewise_regressor(regression_type="multi") if use_piecewise else LogisticRegression(multi_class='multinomial', solver='lbfgs', max_iter=1000)
+                    elif is_logistic:
+#                         model = LogisticRegression(solver='lbfgs', max_iter=1000)
+                        model = piecewise_regressor(regression_type="logistic") if use_piecewise else LogisticRegression(solver='lbfgs', max_iter=1000)
+                    else:
+#                         model = LinearRegression()
+                        model = piecewise_regressor(regression_type="linear") if use_piecewise else LinearRegression()
+                    model.fit(X[:, combo], y_train)
+                    y_pred = model.predict(X_test[:, combo])
+                    dic_errors_all[combo] = np.abs(y_pred - y_test)
+                    predictors[combo] = model
+                    the_sme = mean_squared_error(y_test, y_pred) if not use_multinomial else 1 - accuracy_score(y_test, y_pred)
+                    print("key", combo, "sme", the_sme)
+                    dic_sme[combo] = the_sme
+                    already_list.append(combo)
 
         winner_predictors = [predictors[a] for i, a in enumerate(already_list)]
         self.combo_list = already_list
