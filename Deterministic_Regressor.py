@@ -1,6 +1,6 @@
 ### Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 3.2.6
+# Version: 3.2.7
 # Date: 2024/02/18
 
 import itertools
@@ -75,12 +75,10 @@ class Deterministic_Regressor:
         except Exception as e:
             return False
 
-    def findClusters(X_in):
+    def findClusters(X_in, max_clusters=6):
 
         X = np.array([np.array(x) for x in X_in])
         target_cols = [i for i, xx in enumerate(X[0]) if Deterministic_Regressor.IsNonBinaryNumeric([row[i] for row in X])]
-
-        max_clusters = 10
 
         n_components = np.arange(1, max_clusters)
         models = [GaussianMixture(n, covariance_type='full').fit(X) for n in n_components]
@@ -91,7 +89,8 @@ class Deterministic_Regressor:
         for j in range(len(models)-1):
             if j == 0 and (aic[0] < aic[1] or bic[0] < bic[1]):
                 break
-            if j > 0 and (aic[j] < aic[j+1] or bic[j] < bic[j+1]):
+#             if j > 0 and (aic[j] < aic[j+1] or bic[j] < bic[j+1]):
+            if j > 0 and (aic[j] < aic[j+1] and bic[j] < bic[j+1]):
                 num_clusters = j+1
                 break
 
@@ -1147,7 +1146,7 @@ class Deterministic_Regressor:
         self.test_rows = data[:split_index]
         self.train_rows = data[split_index:]
     
-    def prepropcess_continous(self, whole_rows, by_two, splitter=3, max_reg=8, thresh=0.3, add_quads=False, max_vars=3, omit_similar=False, include_all=True, include_related=True, sample_limit=0, num_fit=5, 
+    def prepropcess_continous(self, whole_rows, by_two, splitter=3, max_reg=2, thresh=0.3, add_quads=False, max_vars=3, omit_similar=False, include_all=True, include_related=True, sample_limit=0, num_fit=5, 
                               use_multinomial=False, add_cluster_label=False, use_piecewise=True):
         whole_rows_org = copy.deepcopy(whole_rows)
         headers_org = whole_rows_org[0]
@@ -1196,11 +1195,16 @@ class Deterministic_Regressor:
                 for i, xx in enumerate(X):
                     self.test_rows_org[i].insert(-1, X[i][j]**2)
 # logs do not raise performance and cause occasional error values
-#             for j in range(len(X[0])-1):
-#                 if j not in target_cols:
-#                     continue
-#                 for i, xx in enumerate(X):
+            for j in range(len(X[0])-1):
+                if j not in target_cols:
+                    continue
+                for i, xx in enumerate(X):
 #                     self.test_rows_org[i].insert(-1, np.log(X[i][j]) if not np.isnan(np.log(X[i][j])) else 0)
+                    
+                    log_val = 0. if X[i][j] < 1 else np.log(X[i][j])
+                    if np.isnan(log_val) or log_val == float("-inf") or log_val == float("inf"):
+                        log_val = 0.
+                    self.test_rows_org[i].insert(-1, log_val)
                     
                     
             X = copy.deepcopy(self.train_rows_org)
@@ -1210,11 +1214,16 @@ class Deterministic_Regressor:
                 for i, xx in enumerate(X):
                     self.train_rows_org[i].insert(-1, X[i][j]**2)
 # logs do not raise performance and cause occasional error values
-#             for j in range(len(X[0])-1):
-#                 if j not in target_cols:
-#                     continue
-#                 for i, xx in enumerate(X):
+            for j in range(len(X[0])-1):
+                if j not in target_cols:
+                    continue
+                for i, xx in enumerate(X):
 #                     self.train_rows_org[i].insert(-1, np.log(X[i][j]) if not np.isnan(np.log(X[i][j])) else 0)
+                    log_val = 0. if X[i][j] < 1 else np.log(X[i][j])
+                    if np.isnan(log_val) or log_val == float("-inf") or log_val == float("inf"):
+                        log_val = 0.
+                    self.train_rows_org[i].insert(-1, log_val)
+    
 #         print("self.get_train_dat_org_wo_head()[:20]", self.get_train_dat_org_wo_head()[:20])
         return self.continuous_regress(self.get_train_dat_org_wo_head(), self.get_train_res_org_wo_head(), max_reg=max_reg, thresh=thresh, max_vars=max_vars, omit_similar=omit_similar, 
                                        include_all=include_all, include_related=include_related, sample_limit=sample_limit, num_fit=num_fit, use_multinomial=use_multinomial, use_piecewise=use_piecewise)
@@ -1287,7 +1296,7 @@ class Deterministic_Regressor:
         #         # The mean squared error
         print('Mean squared error: %.2f' % mean_squared_error(y_test, y_pred))
         
-    def continuous_regress(self, X_train, y_train, X_test=None, y_test=None, max_reg=8, thresh=0.3, max_vars=3, omit_similar=False, include_all=True, include_related=True, sample_limit=0, num_fit=5, 
+    def continuous_regress(self, X_train, y_train, X_test=None, y_test=None, max_reg=2, thresh=0.3, max_vars=3, omit_similar=False, include_all=True, include_related=True, sample_limit=0, num_fit=5, 
                            use_multinomial=False, use_piecewise=True):
 
     #     if test_size == 0.0:
@@ -1346,7 +1355,6 @@ class Deterministic_Regressor:
             all_best_sme = mean_squared_error(y_test, y_pred) if not use_multinomial else 1 - accuracy_score(y_test, y_pred)
             dic_sme[combo] = all_best_sme
 
-        
         ind_all = 0
         numloop = max_vars if len(target_cols) > max_vars else len(target_cols)
         model = None
@@ -1425,7 +1433,7 @@ class Deterministic_Regressor:
         already_list = list()
         min_sme = -1
         already_tup = ()
-        
+            
         for f in sorted([(v, k) for k, v in dic_sme.items()]):
             if i == 0:
                 min_sme = f[0]
