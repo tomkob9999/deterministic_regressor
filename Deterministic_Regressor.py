@@ -97,8 +97,9 @@ class Deterministic_Regressor:
 #                 bic = gmm.bic(X)
 #                 print("n", n, "prev_aic", prev_aic, "aic", aic)
 #                 print("n", n, "prev_bic", prev_bic, "bic", bic)
-                num_clusters = n-1
+                num_clusters = n
                 if aic > prev_aic:
+                    num_clusters = n-1
                     gmm = prev_gmm
                     break
                 prev_aic = aic
