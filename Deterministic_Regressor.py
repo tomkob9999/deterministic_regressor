@@ -1194,18 +1194,21 @@ class Deterministic_Regressor:
                     continue
                 for i, xx in enumerate(X):
                     self.test_rows_org[i].insert(-1, X[i][j]**2)
-# logs do not raise performance and cause occasional error values
             for j in range(len(X[0])-1):
                 if j not in target_cols:
                     continue
                 for i, xx in enumerate(X):
 #                     self.test_rows_org[i].insert(-1, np.log(X[i][j]) if not np.isnan(np.log(X[i][j])) else 0)
                     
-                    log_val = 0. if X[i][j] < 1 else np.log(X[i][j])
-                    if np.isnan(log_val) or log_val == float("-inf") or log_val == float("inf"):
-                        log_val = 0.
-                    self.test_rows_org[i].insert(-1, log_val)
-                    
+#                     log_val = 0. if X[i][j] < 1 else np.log(X[i][j])
+#                     if np.isnan(log_val) or log_val == float("-inf") or log_val == float("inf"):
+#                         log_val = 0.
+#                     self.test_rows_org[i].insert(-1, log_val)
+                    self.test_rows_org[i].insert(-1, np.sqrt(np.abs(X[i][j])))
+#                     val = np.sqrt(np.abs(X[i][j]))
+#                     if np.isnan(val):
+#                         val = 0
+#                     self.test_rows_org[i].insert(-1, val)
                     
             X = copy.deepcopy(self.train_rows_org)
             for j in range(len(X[0])-1):
@@ -1213,16 +1216,19 @@ class Deterministic_Regressor:
                     continue
                 for i, xx in enumerate(X):
                     self.train_rows_org[i].insert(-1, X[i][j]**2)
-# logs do not raise performance and cause occasional error values
             for j in range(len(X[0])-1):
                 if j not in target_cols:
                     continue
                 for i, xx in enumerate(X):
 #                     self.train_rows_org[i].insert(-1, np.log(X[i][j]) if not np.isnan(np.log(X[i][j])) else 0)
-                    log_val = 0. if X[i][j] < 1 else np.log(X[i][j])
-                    if np.isnan(log_val) or log_val == float("-inf") or log_val == float("inf"):
-                        log_val = 0.
-                    self.train_rows_org[i].insert(-1, log_val)
+#                     log_val = 0. if X[i][j] < 1 else np.log(X[i][j])
+#                     if np.isnan(log_val) or log_val == float("-inf") or log_val == float("inf"):
+#                         log_val = 0.
+#                     self.train_rows_org[i].insert(-1, log_val)
+#                     val = np.sqrt(np.abs(X[i][j]))
+#                     if np.isnan(val):
+#                         val = 0
+                    self.train_rows_org[i].insert(-1, np.sqrt(np.abs(X[i][j])))
     
 #         print("self.get_train_dat_org_wo_head()[:20]", self.get_train_dat_org_wo_head()[:20])
         return self.continuous_regress(self.get_train_dat_org_wo_head(), self.get_train_res_org_wo_head(), max_reg=max_reg, thresh=thresh, max_vars=max_vars, omit_similar=omit_similar, 
