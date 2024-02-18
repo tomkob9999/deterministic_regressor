@@ -1,6 +1,6 @@
 ### Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 3.2.8
+# Version: 3.3.0
 # Date: 2024/02/18
 
 import itertools
@@ -75,7 +75,7 @@ class Deterministic_Regressor:
         except Exception as e:
             return False
 
-    def findClusters(X_in, max_clusters=6):
+    def findClusters(X_in, max_clusters=10):
 
         X = np.array([np.array(x) for x in X_in])
         target_cols = [i for i, xx in enumerate(X[0]) if Deterministic_Regressor.IsNonBinaryNumeric([row[i] for row in X])]
@@ -86,14 +86,22 @@ class Deterministic_Regressor:
         bic = [model.bic(X) for model in models]
 
         num_clusters = 1
-        for j in range(len(models)-1):
-            if j == 0 and (aic[0] < aic[1] or bic[0] < bic[1]):
-                break
+#         for j in range(len(models)-1):
+#             if j == 0 and (aic[0] < aic[1] or bic[0] < bic[1]):
+#                 break
 #             if j > 0 and (aic[j] < aic[j+1] or bic[j] < bic[j+1]):
-            if j > 0 and (aic[j] < aic[j+1] and bic[j] < bic[j+1]):
-                num_clusters = j+1
+#                 num_clusters = j+1
+#                 break
+        min_aic = float("inf")
+        min_bic = float("inf")
+        for j in range(len(models)):
+            if aic[j] > min_aic and bic[j] > min_bic:
+                num_clusters = j
                 break
-
+            if aic[j] < min_aic:
+                min_aic = aic[j] 
+            if bic[j] < min_bic:
+                min_bic = bic[j] 
         X_clust = []
         y_clust = []
         if num_clusters > 1:
@@ -1451,7 +1459,7 @@ class Deterministic_Regressor:
 
 #         print("already_list", already_list)
         if include_related:
-            numtop = 6
+            numtop = 8
             related_cols = []
 #             for a in already_list:
             for f in sorted([(v, k) for k, v in dic_sme.items()]):
