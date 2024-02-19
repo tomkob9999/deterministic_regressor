@@ -1104,13 +1104,13 @@ class Deterministic_Regressor:
 
         return new_res
     
-    def solve_with_highest(self, inp_p_org):
+    def solve_with_highest(self, inp_p_org, rank=0):
         
         new_res = [0] * len(inp_p_org)
-        print(self.combo_list[0], "is used")
+        print(self.combo_list[rank], "is used")
         for i in range(len(inp_p_org)):
             
-            new_res[i] = self.predictors[0].predict([[c for i, c in enumerate(inp_p_org[i]) if i in self.combo_list[0]]])[0]
+            new_res[i] = self.predictors[rank].predict([[c for i, c in enumerate(inp_p_org[i]) if i in self.combo_list[rank]]])[0]
             
         return new_res
     
