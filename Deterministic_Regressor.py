@@ -1,86 +1,4 @@
-### Name: Deterministic_Regressor
-# Author: tomio kobayashi
-# Version: 3.3.2
-# Date: 2024/02/19
-
-import itertools
-from sympy.logic import boolalg
-import numpy as np
-import sklearn.datasets
-from sklearn.metrics import precision_score, recall_score, f1_score, confusion_matrix
-from sklearn.model_selection import train_test_split
-import pandas as pd
-import random
-from sympy import simplify
-import copy
-from collections import Counter
-import time
-from itertools import combinations
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import mean_squared_error, r2_score
-from sklearn.linear_model import LogisticRegression
-from sklearn.linear_model import ElasticNet
-from sklearn.linear_model import Lasso
-from sklearn.linear_model import Ridge
-from sklearn.metrics import accuracy_score, classification_report
-from sklearn.mixture import GaussianMixture
-import warnings
-from sklearn.exceptions import ConvergenceWarning
-
-
-class Deterministic_Regressor:
-# This version has no good matches
-# Instead, all true matches are first added, and some are removed when 
-# false unmatch exists and there is no corresponding other rule
-    def __init__(self, supress_sklearn_warn=True):
-        self.expression_true = ""
-        self.expression_false = ""
-        self.true_confidence = {}
-        self.false_confidence = {}
-        self.all_confidence = {}
-        
-        self.tokens = []
-        self.dic_segments = {}
-        
-        self.last_solve_expression = ""
-        
-        self.expression_opt = ""
-        self.by_two = -1
-        self.opt_f1 = 0.001
-        
-        self.children = []
-        
-        self.whole_rows = []
-        self.test_rows = []
-        self.train_rows = []
-
-        self.whole_rows_org = []
-        self.test_rows_org = []
-        self.train_rows_org = []
-        
-        self.classDic = {}
-        self.classDicRev = {}
-        self.item_counts = {}
-        
-        self.combo_list = []
-        self.predictors = []
-        self.target_cols = []
-        self.gmm = None
-
-        if supress_sklearn_warn:
-            warnings.filterwarnings("ignore", category=ConvergenceWarning, module="sklearn")
-            warnings.filterwarnings("ignore", category=UserWarning, module="sklearn")
-
-    def IsNonBinaryNumeric(n):
-        try:
-            return any([nn != 1 and nn != 0 and nn < float('inf') for nn in n])
-        except Exception as e:
-            return False
-
-    def findClusters(X_in, max_clusters=20):
-
-        X = np.array([np.array(x) for x in X_in])
-        target_cols = [i for i, xx in enumerate(X[0]) if Deterministic_Regressor.IsNonBinaryNumeric([row[i] for row in X])]
+target_cols = [i for i, xx in enumerate(X[0]) if Deterministic_Regressor.IsNonBinaryNumeric([row[i] for row in X])]
 
 #         n_components = np.arange(1, max_clusters)
 #         models = [GaussianMixture(n, covariance_type='full').fit(X) for n in n_components]
@@ -1373,7 +1291,7 @@ class Deterministic_Regressor:
                 print("")
                 print("Linear Regression type:", linear_type)
                 if use_piecewise:
-                    model = piecewise_regressor(linear_type=linear_type)
+                    model = piecewise_regressor(regression_type=linear_type)
                 else:
                     if linear_type == "lasso":
                         model = Lasso()
@@ -1520,7 +1438,7 @@ class Deterministic_Regressor:
 #                         model = piecewise_regressor(regression_type="linear") if use_piecewise else LinearRegression()
 #                         model = piecewise_regressor(regression_type=regression_type) if use_piecewise else LinearRegression()
                         if use_piecewise:
-                            model = piecewise_regressor(linear_type=linear_type)
+                            model = piecewise_regressor(regression_type=linear_type)
                         else:
                             if linear_type == "lasso":
                                 model = Lasso()
