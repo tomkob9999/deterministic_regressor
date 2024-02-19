@@ -1,7 +1,7 @@
 ### Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 3.3.1
-# Date: 2024/02/18
+# Version: 3.3.2
+# Date: 2024/02/19
 
 import itertools
 from sympy.logic import boolalg
@@ -20,6 +20,8 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.linear_model import LogisticRegression
 from sklearn.linear_model import ElasticNet
+from sklearn.linear_model import Lasso
+from sklearn.linear_model import Ridge
 from sklearn.metrics import accuracy_score, classification_report
 from sklearn.mixture import GaussianMixture
 import warnings
@@ -1166,7 +1168,7 @@ class Deterministic_Regressor:
         self.train_rows = data[split_index:]
     
     def prepropcess_continous(self, whole_rows, by_two, splitter=3, max_reg=2, thresh=0.3, add_quads=False, max_vars=3, omit_similar=False, include_all=True, include_related=True, sample_limit=0, num_fit=5, 
-                              use_multinomial=False, add_cluster_label=False, use_piecewise=True):
+                              use_multinomial=False, add_cluster_label=False, use_piecewise=True, linear_type="lasso"):
         whole_rows_org = copy.deepcopy(whole_rows)
         headers_org = whole_rows_org[0]
         data_org = whole_rows_org[1:]
@@ -1245,7 +1247,8 @@ class Deterministic_Regressor:
     
 #         print("self.get_train_dat_org_wo_head()[:20]", self.get_train_dat_org_wo_head()[:20])
         return self.continuous_regress(self.get_train_dat_org_wo_head(), self.get_train_res_org_wo_head(), max_reg=max_reg, thresh=thresh, max_vars=max_vars, omit_similar=omit_similar, 
-                                       include_all=include_all, include_related=include_related, sample_limit=sample_limit, num_fit=num_fit, use_multinomial=use_multinomial, use_piecewise=use_piecewise)
+                                       include_all=include_all, include_related=include_related, sample_limit=sample_limit, num_fit=num_fit, use_multinomial=use_multinomial, use_piecewise=use_piecewise, 
+                                       linear_type=linear_type)
     
     def get_train_dat_wo_head(self):
         return [row[:-1] for row in self.train_rows]
@@ -1316,7 +1319,7 @@ class Deterministic_Regressor:
         print('Mean squared error: %.2f' % mean_squared_error(y_test, y_pred))
         
     def continuous_regress(self, X_train, y_train, X_test=None, y_test=None, max_reg=2, thresh=0.3, max_vars=3, omit_similar=False, include_all=True, include_related=True, sample_limit=0, num_fit=5, 
-                           use_multinomial=False, use_piecewise=True):
+                           use_multinomial=False, use_piecewise=True, linear_type="lasso"):
 
     #     if test_size == 0.0:
     #         X_train, X_test, y_train, y_test = X, X, y, y
@@ -1366,7 +1369,18 @@ class Deterministic_Regressor:
             else:
 #                 model = LinearRegression() if len(combo) < 10 else ElasticNet()
 #                 model = LinearRegression()
-                model = piecewise_regressor(regression_type="linear") if use_piecewise else LinearRegression()
+#                 model = piecewise_regressor(regression_type="linear") if use_piecewise else LinearRegression()
+                print("")
+                print("Linear Regression type:", linear_type)
+                if use_piecewise:
+                    model = piecewise_regressor(linear_type=linear_type)
+                else:
+                    if linear_type == "lasso":
+                        model = Lasso()
+                    elif linear_type == "elastic":
+                        model = ElasticNet()
+                    else:
+                        model = LinearRegression()
             model.fit(X[:, combo], y_train)
             y_pred = model.predict(X_test[:, combo])
             dic_errors_all[combo] = np.abs(y_pred - y_test)
@@ -1503,7 +1517,18 @@ class Deterministic_Regressor:
                         model = piecewise_regressor(regression_type="logistic") if use_piecewise else LogisticRegression(solver='lbfgs', max_iter=1000)
                     else:
 #                         model = LinearRegression()
-                        model = piecewise_regressor(regression_type="linear") if use_piecewise else LinearRegression()
+#                         model = piecewise_regressor(regression_type="linear") if use_piecewise else LinearRegression()
+#                         model = piecewise_regressor(regression_type=regression_type) if use_piecewise else LinearRegression()
+                        if use_piecewise:
+                            model = piecewise_regressor(linear_type=linear_type)
+                        else:
+                            if linear_type == "lasso":
+                                model = Lasso()
+                            elif linear_type == "elastic":
+                                model = ElasticNet()
+                            else:
+                                model = LinearRegression()
+                        
                     model.fit(X[:, combo], y_train)
                     y_pred = model.predict(X_test[:, combo])
                     dic_errors_all[combo] = np.abs(y_pred - y_test)
