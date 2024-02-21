@@ -1,7 +1,7 @@
 ### Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 3.3.4
-# Date: 2024/02/20
+# Version: 3.3.5
+# Date: 2024/02/21
 
 import itertools
 from sympy.logic import boolalg
@@ -77,8 +77,9 @@ class Deterministic_Regressor:
         except Exception as e:
             return False
 
-    def findClusters(X_in, max_clusters=20):
+    def findClusters(X_in, max_clusters=20, use_aic=True):
 
+        print("use_aic", use_aic)
         X = np.array([np.array(x) for x in X_in])
         target_cols = [i for i, xx in enumerate(X[0]) if Deterministic_Regressor.IsNonBinaryNumeric([row[i] for row in X])]
 
@@ -91,21 +92,22 @@ class Deterministic_Regressor:
         gmm = None
         prev_gmm = None
         prev_aic = float("inf")
-#         prev_bic = float("inf")
+        prev_bic = float("inf")
         for n in range(1, max_clusters+1, 1):
             try:
                 gmm = GaussianMixture(n, covariance_type='full').fit(X[:, target_cols])
                 aic = gmm.aic(X[:, target_cols])
-#                 bic = gmm.bic(X)
+                bic = gmm.bic(X[:, target_cols])
 #                 print("n", n, "prev_aic", prev_aic, "aic", aic)
 #                 print("n", n, "prev_bic", prev_bic, "bic", bic)
                 num_clusters = n
-                if aic > prev_aic:
+#                 if aic > prev_aic:
+                if (use_aic and aic > prev_aic) or (not use_aic and bic > prev_bic):
                     num_clusters = n-1
                     gmm = prev_gmm
                     break
                 prev_aic = aic
-#                 prev_bic = bic
+                prev_bic = bic
                 prev_gmm = gmm
             except Exception as e:
                 print(e)
@@ -1141,7 +1143,7 @@ class Deterministic_Regressor:
                                      elements_count_penalty=elements_count_penalty, use_compact_opt=use_compact_opt, cnt_out=cnt_out, useUnion=useUnion, 
                                      useExpanded=useExpanded, use_stochastic=use_stochastic, stochastic_min_rating=stochastic_min_rating)
     
-    def prepropcess(self, whole_rows, by_two, splitter=3, add_cluster_label=False):
+    def prepropcess(self, whole_rows, by_two, splitter=3, add_cluster_label=False, use_aic=True):
         
         whole_rows_copy = copy.deepcopy(whole_rows)
         if add_cluster_label:
@@ -1149,7 +1151,7 @@ class Deterministic_Regressor:
             data = whole_rows_copy[1:]
             data = data.tolist() if isinstance(data, np.ndarray) else copy.deepcopy(data)
             print("Adding cluster label")
-            clusters, self.gmm = Deterministic_Regressor.findClusters(data)
+            clusters, self.gmm = Deterministic_Regressor.findClusters(data, use_aic=use_aic)
             if clusters is None or len(clusters) == 0:
                 print("No cluster found")
             else:
@@ -1174,7 +1176,7 @@ class Deterministic_Regressor:
         self.train_rows = data[split_index:]
     
     def prepropcess_continous(self, whole_rows, by_two, splitter=3, max_reg=2, thresh=0.3, add_quads=False, max_vars=3, omit_similar=False, include_all=True, include_related=True, sample_limit=0, num_fit=5, 
-                              use_multinomial=False, add_cluster_label=False, use_piecewise=True, linear_type="lasso"):
+                              use_multinomial=False, add_cluster_label=False, use_piecewise=True, linear_type="lasso", use_aic=True):
         whole_rows_org = copy.deepcopy(whole_rows)
         headers_org = whole_rows_org[0]
         data_org = whole_rows_org[1:]
@@ -1183,7 +1185,7 @@ class Deterministic_Regressor:
             data_org = data_org.tolist() if isinstance(data_org, np.ndarray) else copy.deepcopy(data_org)
             print("Adding cluster label")
 #             clusters, self.gmm = Deterministic_Regressor.findClusters(data_org, max_clusters=by_two*2)
-            clusters, self.gmm = Deterministic_Regressor.findClusters(data_org)
+            clusters, self.gmm = Deterministic_Regressor.findClusters(data_org, use_aic=use_aic)
             if clusters is None or len(clusters) == 0:
                 print("No cluster found")
             else:
