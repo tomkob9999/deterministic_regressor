@@ -1,7 +1,7 @@
 ### Name: Deterministic_Regressor
 # Author: tomio kobayashi
-# Version: 3.3.5
-# Date: 2024/02/21
+# Version: 3.3.6
+# Date: 2024/03/14
 
 import itertools
 from sympy.logic import boolalg
@@ -79,14 +79,9 @@ class Deterministic_Regressor:
 
     def findClusters(X_in, max_clusters=20, use_aic=True):
 
-        print("use_aic", use_aic)
         X = np.array([np.array(x) for x in X_in])
         target_cols = [i for i, xx in enumerate(X[0]) if Deterministic_Regressor.IsNonBinaryNumeric([row[i] for row in X])]
 
-#         n_components = np.arange(1, max_clusters)
-#         models = [GaussianMixture(n, covariance_type='full').fit(X) for n in n_components]
-#         aic = [model.aic(X) for model in models]
-#         bic = [model.bic(X) for model in models]
 
         num_clusters = 1
         gmm = None
@@ -98,10 +93,7 @@ class Deterministic_Regressor:
                 gmm = GaussianMixture(n, covariance_type='full').fit(X[:, target_cols])
                 aic = gmm.aic(X[:, target_cols])
                 bic = gmm.bic(X[:, target_cols])
-#                 print("n", n, "prev_aic", prev_aic, "aic", aic)
-#                 print("n", n, "prev_bic", prev_bic, "bic", bic)
                 num_clusters = n
-#                 if aic > prev_aic:
                 if (use_aic and aic > prev_aic) or (not use_aic and bic > prev_bic):
                     num_clusters = n-1
                     gmm = prev_gmm
@@ -120,8 +112,6 @@ class Deterministic_Regressor:
         X_clust = []
         y_clust = []
         if num_clusters > 1:
-#             gmm = GaussianMixture(n_components=num_clusters)
-#             gmm.fit(X)
             cluster_labels = gmm.predict(X[:, target_cols])
             return cluster_labels, gmm
         else:
@@ -138,7 +128,6 @@ class Deterministic_Regressor:
 
     def give_correlated_columns_to_y(data, y, threshold=0.7):
         """Remove columns with strong correlations."""
-#         print("aaa", [row + [y[i]] for i, row in enumerate(data)])
         corr_matrix = Deterministic_Regressor.calculate_correlation_matrix(np.array([row + [y[i]] for i, row in enumerate(data)]))
         related_cols = set()
 
@@ -508,7 +497,6 @@ class Deterministic_Regressor:
         # Sample remaining rows
         sampled_rows = [matrix[0]] + random.sample(matrix[1:], num_rows_to_keep - 1)
 
-#         return sampled_rows
         return copy.deepcopy(sampled_rows)
 
 
@@ -529,8 +517,6 @@ class Deterministic_Regressor:
         #       Increasing this one is heavey especially if check_negative is True
 
         # Example usage:
-        # file_path = '/kaggle/input/dnf-regression/dnf_regression.txt'
-        # file_path = '/kaggle/input/tomio5/dnf_regression.txt'
         
         inp = None
         if file_path is not None:
@@ -566,8 +552,6 @@ class Deterministic_Regressor:
                 continue
             vals = [row[i] for row in inp[1:]]
             cnts = Counter(vals)
-#             print("vals", vals)
-#             print("cnts", cnts)
             if len(cnts) == 1:
                 redundant_cols.add(i)
                 print(self.tokens[i])
@@ -616,10 +600,7 @@ class Deterministic_Regressor:
                 res_t = [0 if row[-1] == 1 else 1 for row in inp[1:]]
 
             if use_stochastic:
-#                 replace_0 = 0.0001
-#                 replace_1 = 0.9999
                 replace_0 = 0.00001
-#                 replace_1 = 0.99999
                 replace_1 = 1.
                 for i in range(len(dat_t)):
                     for j in range(len(dat_t[0])):
@@ -637,24 +618,19 @@ class Deterministic_Regressor:
                     if pattern[1] == 1:
                         if pattern[0] == 1:
                             key = "(" + " & ".join(sorted(list(set([inp[0][ii] for ii in new_covs[i]])))) + ")"
-#                             print("key", key)
                             dnf_perf.append(sorted(list(set([inp[0][ii] for ii in new_covs[i]]))))
                         else:
                             key = "(not (" + ") & not (".join(sorted(list(set([inp[0][ii] for ii in new_covs[i]])))) + "))" 
-#                             print("key", key)
                             dnf_perf.append(sorted(list(set(["not (" + inp[0][ii] + ")" for ii in new_covs[i]]))))
                         self.true_confidence[key] = sum_bef[i]
 
                     else:
                         raw_perf_n.append([ii for ii in new_covs[i]])
-#                         raw_perf2_n.append(b)  
                         if pattern[0] == 1:
                             key = "(" + " & ".join(sorted(list(set([inp[0][ii] for ii in new_covs[i]])))) + ")"
-#                             print("key", key)
                             dnf_perf_n.append(sorted(list(set([inp[0][ii] for ii in new_covs[i]]))))
                         else:
                             key = "(not (" + ") & not (".join(sorted(list(set([inp[0][ii] for ii in new_covs[i]])))) + "))" 
-#                             print("key", key)
                             dnf_perf_n.append(sorted(list(set(["not (" + inp[0][ii] + ")" for ii in new_covs[i]]))))
                         self.false_confidence[key] = sum_bef[i]
                             
@@ -735,7 +711,6 @@ class Deterministic_Regressor:
         self.all_confidence = copy.deepcopy(self.true_confidence)
         self.all_confidence.update(self.false_confidence)
 
-#         print("size of false dnf " + str(len(dnf_perf_n)))
         
         set_dnf_true = set(["(" + s + ")" for s in [" & ".join(a) for a in dnf_perf]])
         set_cnf_false = set(["(" + s + ")" for s in [" & ".join(a) for a in dnf_perf_n]])
@@ -887,9 +862,6 @@ class Deterministic_Regressor:
         
         all_clauses = sorted([(v, k) for k, v in self.all_confidence.items()], reverse=True)
         
-#         print(len(true_clauses), "true clauses")
-#         print(len(false_clauses), "false clauses")
-#         print(len(all_clauses), "all clauses")
         
         final_expr = ""
         best_ee = -1
@@ -900,7 +872,6 @@ class Deterministic_Regressor:
             
             cnt = 0
             for i in range(len(all_clauses)):
-#             for i in range(1, len(all_clauses), 1):
                 cnt = cnt + 1
                 if cnt_out < cnt:
                     break
@@ -1081,7 +1052,6 @@ class Deterministic_Regressor:
     
     def solve_with_opt_continuous(self, inp_p, inp_p_org):
         
-#         res = self.solve_with_opt_bulk(self.get_test_dat_with_head())
         res = self.solve_with_opt_bulk(inp_p)
 
         dic_f1 = {i: self.children[i].opt_f1 for i in range(len(self.children))}
@@ -1090,7 +1060,6 @@ class Deterministic_Regressor:
         len_res = len(res)
         new_res = [0] * len_rows
         
-#         inp_p_org_np = np.array(inp_p_org)
         
         winners = []
         for i in range(len_rows):
@@ -1155,18 +1124,12 @@ class Deterministic_Regressor:
             if clusters is None or len(clusters) == 0:
                 print("No cluster found")
             else:
-#                 count_dict = Counter(clusters)
-#                 for f in sorted([(v, k) for k, v in count_dict.items()], reverse=True):
-#                     print(f"Cluster {f[1]} occurs {f[0]} times.")
     
-#                 print(len(clusters), "clusters found")
                 for i, row in enumerate(data):
                     row.insert(-1, clusters[i])
                 head[0].insert(-1, "clustered_label")
                 whole_rows_copy = head + data 
-    #             print("data[:3]", data[:3])
             
-#         self.whole_rows = self.clean_and_discretize(whole_rows, by_two)
         self.whole_rows = self.clean_and_discretize(whole_rows_copy, by_two)
         headers = self.whole_rows
         data = self.whole_rows[1:]
@@ -1184,28 +1147,19 @@ class Deterministic_Regressor:
         if add_cluster_label:
             data_org = data_org.tolist() if isinstance(data_org, np.ndarray) else copy.deepcopy(data_org)
             print("Adding cluster label")
-#             clusters, self.gmm = Deterministic_Regressor.findClusters(data_org, max_clusters=by_two*2)
             clusters, self.gmm = Deterministic_Regressor.findClusters(data_org, use_aic=use_aic)
             if clusters is None or len(clusters) == 0:
                 print("No cluster found")
             else:
                 count_dict = Counter(clusters)
-#                 for f in sorted([(v, k) for k, v in count_dict.items()], reverse=True):
-#                     print(f"Cluster {f[1]} occurs {f[0]} times.")
                 for i, row in enumerate(data_org):
                     row.insert(-1, clusters[i])
                 headers_org.insert(-1, "clustered_label")
-#                 print("headers_org", headers_org)
-#                 print("data_org[:3]", data_org[:3])
         
         random.shuffle(data_org)  # Shuffle rows in-place
-#         print("headers_org", headers_org)
-#         print("data_org[:3]", data_org[:3])
         
         self.whole_rows_org = [headers_org] + data_org
-#         print("self.whole_rows_org[:3]", self.whole_rows_org[:3])
         self.whole_rows = self.clean_and_discretize(self.whole_rows_org, by_two)
-#         print("self.whole_rows[:3]", self.whole_rows[:3])
         
         headers = self.whole_rows[0]
         data = self.whole_rows[1:]
@@ -1223,38 +1177,25 @@ class Deterministic_Regressor:
                 if j not in target_cols:
                     continue
                 for i, xx in enumerate(X):
-#                     self.test_rows_org[i].insert(-1, X[i][j]**2)
-                    self.test_rows_org[i].insert(-1, X[i][j]**2 if X[i][j] >= 0 else (X[i][j]**2)*-1)
+                    self.test_rows_org[i].insert(-1, X[i][j]*np.e**-0.03)
             for j in range(len(X[0])-1):
                 if j not in target_cols:
                     continue
                 for i, xx in enumerate(X):
-#                     self.test_rows_org[i].insert(-1, np.sqrt(np.abs(X[i][j])))
-                    self.test_rows_org[i].insert(-1, np.sqrt(X[i][j]) if X[i][j] >= 0 else np.sqrt(X[i][j]*-1)*-1)
+                    self.test_rows_org[i].insert(-1, X[i][j]*np.e**0.03)
                     
             X = copy.deepcopy(self.train_rows_org)
             for j in range(len(X[0])-1):
                 if j not in target_cols:
                     continue
                 for i, xx in enumerate(X):
-#                     self.train_rows_org[i].insert(-1, X[i][j]**2)
-                    self.train_rows_org[i].insert(-1, X[i][j]**2 if X[i][j] > 0 else (X[i][j]**2)*-1)
+                    self.train_rows_org[i].insert(-1, X[i][j]*np.e**-0.03)
             for j in range(len(X[0])-1):
                 if j not in target_cols:
                     continue
                 for i, xx in enumerate(X):
-#                     self.train_rows_org[i].insert(-1, np.log(X[i][j]) if not np.isnan(np.log(X[i][j])) else 0)
-#                     log_val = 0. if X[i][j] < 1 else np.log(X[i][j])
-#                     if np.isnan(log_val) or log_val == float("-inf") or log_val == float("inf"):
-#                         log_val = 0.
-#                     self.train_rows_org[i].insert(-1, log_val)
-#                     val = np.sqrt(np.abs(X[i][j]))
-#                     if np.isnan(val):
-#                         val = 0
-#                     self.train_rows_org[i].insert(-1, np.sqrt(np.abs(X[i][j])))
-                    self.train_rows_org[i].insert(-1, np.sqrt(X[i][j]) if X[i][j] >= 0 else np.sqrt(X[i][j]*-1)*-1)
+                    self.train_rows_org[i].insert(-1, X[i][j]*np.e**0.03)
     
-#         print("self.get_train_dat_org_wo_head()[:20]", self.get_train_dat_org_wo_head()[:20])
         return self.continuous_regress(self.get_train_dat_org_wo_head(), self.get_train_res_org_wo_head(), max_reg=max_reg, thresh=thresh, max_vars=max_vars, omit_similar=omit_similar, 
                                        include_all=include_all, include_related=include_related, sample_limit=sample_limit, num_fit=num_fit, use_multinomial=use_multinomial, use_piecewise=use_piecewise, 
                                        linear_type=linear_type)
@@ -1284,22 +1225,14 @@ class Deterministic_Regressor:
         return [row[:-1] for row in self.train_rows_org]
     def get_train_res_org_wo_head(self):
         return [row[-1] for row in self.train_rows_org]
-#     def get_train_dat_org_with_head(self):
-#         return [self.whole_rows_org[0][:-1]] + [row[:-1] for row in self.train_rows_org]
     def get_train_datres_org_wo_head(self):
         return self.train_rows_org
-#     def get_train_datres_org_with_head(self):
-#         return [self.whole_rows_org[0]] + self.train_rows_org
     def get_test_dat_org_wo_head(self):
         return [row[:-1] for row in self.test_rows_org]
     def get_test_res_org_wo_head(self):
         return [row[-1] for row in self.test_rows_org]
-#     def get_test_dat_org_with_head(self):
-#         return [self.whole_rows_org[0][:-1]] + [row[:-1] for row in self.test_rows_org]
     def get_test_datres_org_wo_head(self):
         return self.test_rows_org[1:]
-#     def get_test_datres_org_with_head(self):
-#         return [self.whole_rows_org[0]] + self.test_rows_org
     
     def show_stats(predicted, actual, average="weighted", elements_count_penalty=1.0):
         
@@ -1330,16 +1263,11 @@ class Deterministic_Regressor:
     def continuous_regress(self, X_train, y_train, X_test=None, y_test=None, max_reg=2, thresh=0.3, max_vars=3, omit_similar=False, include_all=True, include_related=True, sample_limit=0, num_fit=5, 
                            use_multinomial=False, use_piecewise=True, linear_type="lasso"):
 
-    #     if test_size == 0.0:
-    #         X_train, X_test, y_train, y_test = X, X, y, y
-    #     else:
-    #         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size)
 
         if X_test is None:
             X_test = X_train
             y_test = y_train
             
-#         print("y_train", y_train)
         is_logistic = all([y == 0 or y == 1 for y in y_train])
 
         if is_logistic:
@@ -1368,17 +1296,11 @@ class Deterministic_Regressor:
             combo = tuple(target_cols)
             print(combo, sep=' ', end='')
             print(" ", end='')
-#             model = LinearRegression()
             if use_multinomial:
-#                 model = LogisticRegression(multi_class='multinomial', solver='lbfgs', max_iter=1000)
                 model = piecewise_regressor(regression_type="multi") if use_piecewise else LogisticRegression(multi_class='multinomial', solver='lbfgs', max_iter=1000)
             elif is_logistic:
-#                 model = LogisticRegression(solver='lbfgs', max_iter=1000)
                 model = piecewise_regressor(regression_type="logistic") if use_piecewise else LogisticRegression(solver='lbfgs', max_iter=1000)
             else:
-#                 model = LinearRegression() if len(combo) < 10 else ElasticNet()
-#                 model = LinearRegression()
-#                 model = piecewise_regressor(regression_type="linear") if use_piecewise else LinearRegression()
                 print("")
                 print("Linear Regression type:", linear_type)
                 if use_piecewise:
@@ -1416,8 +1338,6 @@ class Deterministic_Regressor:
                 if combo in dic_sme:
                     continue
                     
-#                 print(combo, sep=' ', end='')
-#                 print(" ", end='')
                 print(".", end='')
                 if sample_limit == 0:
     
@@ -1426,7 +1346,6 @@ class Deterministic_Regressor:
                     elif is_logistic:
                         model = LogisticRegression(solver='lbfgs', max_iter=1000)
                     else:
-#                         model = LinearRegression() if len(combo) < 10 else ElasticNet()
                         model = LinearRegression()
 
                     # Train the model using the training sets
@@ -1446,7 +1365,6 @@ class Deterministic_Regressor:
                         elif is_logistic:
                             tmp_model = LogisticRegression(solver='lbfgs', max_iter=1000)
                         else:
-#                             tmp_model = LinearRegression() if len(combo) < 5 else ElasticNet()
                             tmp_model = LinearRegression()
 
     
@@ -1491,16 +1409,13 @@ class Deterministic_Regressor:
             i += 1
 
 
-#         print("already_list", already_list)
         if include_related:
             numtop = 8
             related_cols = []
-#             for a in already_list:
             for f in sorted([(v, k) for k, v in dic_sme.items()]):
                 if len(f[1]) > 3:
                     continue
                 for aa in f[1]:
-#                     print("aa", aa)
                     if aa not in related_cols:
                         related_cols.append(aa)
                     if len(related_cols) >= numtop:
@@ -1508,26 +1423,15 @@ class Deterministic_Regressor:
                 
                 if len(related_cols) >= numtop:
                     break
-#             print("related_cols", related_cols)
             if len(related_cols) > 1:
                 related_cols = tuple(sorted(related_cols))
                 if related_cols not in already_list:
-#                     related_cols = Deterministic_Regressor.give_correlated_columns_to_y(X_train, y_train, threshold=0.5)
-#                     if len(related_cols) > 0 and tuple(target_cols) != tuple(related_cols):
-#                     combo = tuple(related_cols)
                     combo = related_cols
-#                     print(combo, sep=' ', end='')
-#                     print(" ", end='')
                     if use_multinomial:
-#                         model = LogisticRegression(multi_class='multinomial', solver='lbfgs', max_iter=1000)
                         model = piecewise_regressor(regression_type="multi") if use_piecewise else LogisticRegression(multi_class='multinomial', solver='lbfgs', max_iter=1000)
                     elif is_logistic:
-#                         model = LogisticRegression(solver='lbfgs', max_iter=1000)
                         model = piecewise_regressor(regression_type="logistic") if use_piecewise else LogisticRegression(solver='lbfgs', max_iter=1000)
                     else:
-#                         model = LinearRegression()
-#                         model = piecewise_regressor(regression_type="linear") if use_piecewise else LinearRegression()
-#                         model = piecewise_regressor(regression_type=regression_type) if use_piecewise else LinearRegression()
                         if use_piecewise:
                             model = piecewise_regressor(regression_type=linear_type)
                         else:
